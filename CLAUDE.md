@@ -6,16 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Arcade Vault** — plataforma online de juegos arcade retro donde los usuarios compiten por puntuaciones. Stack: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4 + pnpm.
 
-## Comandos
-
-```bash
-pnpm dev        # servidor dev en localhost:3000
-pnpm build      # compilar producción
-pnpm start      # servir build de producción
-pnpm lint       # ESLint
-```
-
 No hay test runner configurado todavía.
+
+## Skills
+Usa siempre /frontend-design para hacer interfaces de usuario. 
 
 ## Arquitectura
 
