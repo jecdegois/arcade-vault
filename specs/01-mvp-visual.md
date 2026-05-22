@@ -1,6 +1,6 @@
 # SPEC 01 — MVP visual completo de Arcade Vault
 
-> **Status:** Aprobado · **Depende de:** — · **Fecha:** 2026-05-22
+> **Status:** Implementado · **Depende de:** — · **Fecha:** 2026-05-22
 > **Objetivo:** Migrar todas las pantallas del prototipo (`references/templates/`) a Next.js App Router con TypeScript, conservando el diseño pixel-neon del prototipo sin implementar lógica real de juegos.
 
 ---
@@ -69,28 +69,28 @@ export function seededScores(): AVScores { /* generador determinístico */ }
 
 ## Implementation plan
 
-- [ ] 1. Crear `app/data.ts` con tipos, `GAMES` (8 juegos), `CATS` y `seededScores`.
+- [x] 1. Crear `app/data.ts` con tipos, `GAMES` (8 juegos), `CATS` y `seededScores`.
          Test manual: importar desde `app/page.tsx` y hacer `console.log(GAMES)` — sin errores de TS.
 
-- [ ] 2. Crear `app/context.tsx` con `UserContext` (provider + hook `useUser`).
+- [x] 2. Crear `app/context.tsx` con `UserContext` (provider + hook `useUser`).
          Wrapear el layout raíz en `app/layout.tsx`. Leer/escribir `localStorage:av_user`.
 
-- [ ] 3. Crear `app/components/Nav.tsx`.
+- [x] 3. Crear `app/components/Nav.tsx`.
          Test manual: visible en todas las rutas; menú móvil abre y cierra; link activo resaltado.
 
-- [ ] 4. Crear `app/page.tsx` (Library): hero, chips de categoría, búsqueda, grid de `GameCard`.
+- [x] 4. Crear `app/page.tsx` (Library): hero, chips de categoría, búsqueda, grid de `GameCard`.
          Test manual: filtrar por categoría y buscar por nombre muestra el subconjunto correcto.
 
-- [ ] 5. Crear `app/games/[id]/page.tsx` (GameDetail): cover art, stats strip, leaderboard inline, botones.
+- [x] 5. Crear `app/games/[id]/page.tsx` (GameDetail): cover art, stats strip, leaderboard inline, botones.
          Test manual: navegar desde Library a un juego muestra su detalle correcto.
 
-- [ ] 6. Crear `app/games/[id]/play/page.tsx` (GamePlayer): HUD, pantalla CRT animada, modal game-over.
+- [x] 6. Crear `app/games/[id]/play/page.tsx` (GamePlayer): HUD, pantalla CRT animada, modal game-over.
          Test manual: abrir modal, escribir nombre, guardar → `localStorage:av_scores` contiene la entrada.
 
-- [ ] 7. Crear `app/hall-of-fame/page.tsx` (HallOfFame): selector de juego, podio top-3, tabla completa.
+- [x] 7. Crear `app/hall-of-fame/page.tsx` (HallOfFame): selector de juego, podio top-3, tabla completa.
          Test manual: cambiar juego en el selector actualiza podio y tabla.
 
-- [ ] 8. Crear `app/auth/page.tsx` (Auth): tabs login/registro, campos, botones sociales.
+- [x] 8. Crear `app/auth/page.tsx` (Auth): tabs login/registro, campos, botones sociales.
          Test manual: tab login ↔ registro alterna formulario; submit login guarda usuario en contexto y redirige a `/`.
 
 ---
