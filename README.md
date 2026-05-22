@@ -15,5 +15,11 @@ https://github.com/Klerith/fernando-skills
 npx skills@latest add Klerith/fernando-skills
 ```
 
+## Comandos
 
-hola mundako
+```bash
+pnpm dev        # servidor dev en localhost:3000
+pnpm build      # compilar producción
+pnpm start      # servir build de producción
+pnpm lint       # ESLint
+```
