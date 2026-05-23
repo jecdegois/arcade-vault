@@ -48,7 +48,7 @@ export default function Nav() {
             Salón de la Fama
           </Link>
           <Link href="/about" className={isAboutActive ? 'active' : ''}>
-            ABOUT
+            Sobre Nosotros
           </Link>
         </div>
 

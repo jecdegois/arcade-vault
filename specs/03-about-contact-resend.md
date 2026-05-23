@@ -1,6 +1,6 @@
 # SPEC 03 — Página About + formulario de contacto con Resend
 
-> **Status:** Approve
+> **Status:** Implementado
 > **Depende de:** 02-home-page
 > **Fecha:** 2026-05-23
 > **Objetivo:** Implementar la página `/about` migrando `about.jsx` a Next.js App Router y conectar el formulario de contacto a Resend para enviar correos reales a jecdegois12345@gmail.com.
@@ -35,46 +35,46 @@
 
 ## Implementation plan
 
-- [ ] 1. Instalar `resend` con pnpm y añadir `RESEND_API_KEY` a `.env.local`.
+- [x] 1. Instalar `resend` con pnpm y añadir `RESEND_API_KEY` a `.env.local`.
          Verificación: `pnpm list resend` muestra la dependencia; `.env.local` tiene la variable.
 
-- [ ] 2. Añadir los estilos del bloque `/* ===== ABOUT PAGE ===== */` de
+- [x] 2. Añadir los estilos del bloque `/* ===== ABOUT PAGE ===== */` de
          `references/templates/home-about/styles.css` a `app/globals.css`.
          Verificación: screenshot de `/games` y `/` con Playwright — sin regresión visual.
 
-- [ ] 3. Crear `app/api/contact/route.ts` con handler POST que valida que
+- [x] 3. Crear `app/api/contact/route.ts` con handler POST que valida que
          `name`, `email` y `msg` no estén vacíos, llama a Resend SDK con
          `from: "onboarding@resend.dev"`, `to: "jecdegois12345@gmail.com"`,
          y devuelve `{ ok: true }` o `{ error: string }` con el status HTTP correspondiente.
          Verificación: `curl -X POST` con payload válido → llega correo a Gmail;
          con payload vacío → devuelve 400.
 
-- [ ] 4. Crear `app/about/page.tsx` con `HighlightIcon` y `About` migrados a TSX.
+- [x] 4. Crear `app/about/page.tsx` con `HighlightIcon` y `About` migrados a TSX.
          El formulario hace `fetch("/api/contact", { method: "POST", body: JSON.stringify(form) })`:
          respuesta 200 → muestra terminal de éxito; respuesta de error → muestra mensaje de error inline.
          IntersectionObserver en `useEffect` para las clases `.reveal`.
          Verificación: abrir `/about` con Playwright y comparar sección a sección contra `about.jsx`
          en `arcade-vault-standalone.html`.
 
-- [ ] 5. Añadir link `{ href: "/about", label: "ABOUT" }` al final de los links en `Nav.tsx`.
+- [x] 5. Añadir link `{ href: "/about", label: "ABOUT" }` al final de los links en `Nav.tsx`.
          Verificación: link visible en desktop y en menú móvil; resaltado activo en `/about`.
 
 ---
 
 ## Acceptance criteria
 
-- [ ] `resend` aparece en `package.json` y `RESEND_API_KEY` existe en `.env.local`.
-- [ ] `/about` carga sin errores de TypeScript ni consola.
-- [ ] La página muestra las dos secciones: "Acerca de" (hero + 3 highlights) y "Contacto" (intro + formulario).
-- [ ] Los elementos con clase `.reveal` aparecen con animación al hacer scroll (IntersectionObserver activo).
-- [ ] El formulario con campos vacíos hace shake y no llama a la API.
-- [ ] Enviar el formulario con datos válidos → llega correo a `jecdegois12345@gmail.com` con nombre, email y mensaje del remitente.
-- [ ] Tras envío exitoso el formulario se reemplaza por el terminal de éxito con el nombre del remitente en mayúsculas.
-- [ ] El botón "ENVIAR OTRO MENSAJE" resetea el formulario y vuelve al estado inicial.
-- [ ] Si la API devuelve error, el formulario muestra un mensaje de error inline sin reemplazar el formulario.
-- [ ] El link "ABOUT" aparece al final del Nav en desktop y en el menú móvil, resaltado cuando la ruta es `/about`.
-- [ ] No hay regresión visual en `/`, `/games`, `/auth` y `/hall-of-fame`.
-- [ ] La página es navegable en viewport móvil (375px) sin scroll horizontal.
+- [x] `resend` aparece en `package.json` y `RESEND_API_KEY` existe en `.env.local`.
+- [x] `/about` carga sin errores de TypeScript ni consola.
+- [x] La página muestra las dos secciones: "Acerca de" (hero + 3 highlights) y "Contacto" (intro + formulario).
+- [x] Los elementos con clase `.reveal` aparecen con animación al hacer scroll (IntersectionObserver activo).
+- [x] El formulario con campos vacíos hace shake y no llama a la API.
+- [x] Enviar el formulario con datos válidos → llega correo a `jecdegois12345@gmail.com` con nombre, email y mensaje del remitente.
+- [x] Tras envío exitoso el formulario se reemplaza por el terminal de éxito con el nombre del remitente en mayúsculas.
+- [x] El botón "ENVIAR OTRO MENSAJE" resetea el formulario y vuelve al estado inicial.
+- [x] Si la API devuelve error, el formulario muestra un mensaje de error inline sin reemplazar el formulario.
+- [x] El link "ABOUT" aparece al final del Nav en desktop y en el menú móvil, resaltado cuando la ruta es `/about`.
+- [x] No hay regresión visual en `/`, `/games`, `/auth` y `/hall-of-fame`.
+- [x] La página es navegable en viewport móvil (375px) sin scroll horizontal.
 
 ---
 
