@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 function HighlightIcon({ kind }: { kind: string }) {
   const C = "currentColor";
   if (kind === "HEART") return (
-    <svg className="hl-icon" viewBox="0 0 16 16"><g fill={C}>
+    <svg className="hl-icon" viewBox="0 0 16 16" width="36" height="36"><g fill={C}>
       <rect x="2" y="3" width="4" height="2"/><rect x="10" y="3" width="4" height="2"/>
       <rect x="1" y="4" width="2" height="4"/><rect x="13" y="4" width="2" height="4"/>
       <rect x="2" y="8" width="2" height="2"/><rect x="12" y="8" width="2" height="2"/>
@@ -17,7 +17,7 @@ function HighlightIcon({ kind }: { kind: string }) {
     </g></svg>
   );
   if (kind === "BROWSER") return (
-    <svg className="hl-icon" viewBox="0 0 16 16"><g fill={C}>
+    <svg className="hl-icon" viewBox="0 0 16 16" width="36" height="36"><g fill={C}>
       <rect x="1" y="2" width="14" height="12" fill="none" stroke={C} strokeWidth="1.4"/>
       <rect x="1" y="2" width="14" height="3"/>
       <rect x="3" y="3" width="1" height="1" fill="#0a0a0f"/>
@@ -27,7 +27,7 @@ function HighlightIcon({ kind }: { kind: string }) {
     </g></svg>
   );
   if (kind === "PLANT") return (
-    <svg className="hl-icon" viewBox="0 0 16 16"><g fill={C}>
+    <svg className="hl-icon" viewBox="0 0 16 16" width="36" height="36"><g fill={C}>
       <rect x="7" y="2" width="2" height="10"/>
       <rect x="4" y="4" width="3" height="2"/><rect x="9" y="6" width="3" height="2"/>
       <rect x="3" y="3" width="2" height="2"/><rect x="11" y="5" width="2" height="2"/>

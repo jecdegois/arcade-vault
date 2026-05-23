@@ -14,6 +14,7 @@ export default function Nav() {
   const isHomeActive = pathname === '/';
   const isLibraryActive = pathname.startsWith('/games');
   const isHallActive = pathname === '/hall-of-fame';
+  const isAboutActive = pathname === '/about';
 
   const closePanel = () => setOpen(false);
 
@@ -45,6 +46,9 @@ export default function Nav() {
           </Link>
           <Link href="/hall-of-fame" className={isHallActive ? 'active' : ''}>
             Salón de la Fama
+          </Link>
+          <Link href="/about" className={isAboutActive ? 'active' : ''}>
+            ABOUT
           </Link>
         </div>
 
@@ -109,6 +113,13 @@ export default function Nav() {
           onClick={closePanel}
         >
           Salón de la Fama
+        </Link>
+        <Link
+          href="/about"
+          className={isAboutActive ? 'active' : ''}
+          onClick={closePanel}
+        >
+          ABOUT
         </Link>
         <Link
           href="/auth"
