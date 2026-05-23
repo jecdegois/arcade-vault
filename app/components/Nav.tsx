@@ -11,8 +11,8 @@ export default function Nav() {
   const router = useRouter();
   const { user, setUser } = useUser();
 
+  const isHomeActive = pathname === '/';
   const isLibraryActive = pathname.startsWith('/games');
-
   const isHallActive = pathname === '/hall-of-fame';
 
   const closePanel = () => setOpen(false);
@@ -37,6 +37,9 @@ export default function Nav() {
 
         {/* Desktop links */}
         <div className="links">
+          <Link href="/" className={isHomeActive ? 'active' : ''}>
+            Inicio
+          </Link>
           <Link href="/games" className={isLibraryActive ? 'active' : ''}>
             Biblioteca
           </Link>
@@ -86,6 +89,13 @@ export default function Nav() {
           MENÚ
         </div>
 
+        <Link
+          href="/"
+          className={isHomeActive ? 'active' : ''}
+          onClick={closePanel}
+        >
+          Inicio
+        </Link>
         <Link
           href="/games"
           className={isLibraryActive ? 'active' : ''}
