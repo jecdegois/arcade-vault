@@ -1,6 +1,6 @@
 # SPEC 02 — Página Home (/home → reemplaza /)
 
-> **Status:** Aprobado  
+> **Status:** Implemented  
 > **Depende de:** 01-mvp-visual  
 > **Fecha:** 2026-05-23  
 > **Objetivo:** Implementar la página Home en la ruta `/` migrando `references/templates/home-about/home.jsx` a Next.js App Router, y mover la Library a `/games`.
@@ -29,23 +29,23 @@
 
 ## Implementation plan
 
-- [ ] 1. Mover `app/page.tsx` (Library) a `app/games/page.tsx`.
+- [x] 1. Mover `app/page.tsx` (Library) a `app/games/page.tsx`.
          Verificación: abrir `/games` con Playwright y comparar screenshot contra
          `references/templates/home-about/arcade-vault-standalone.html` (vista biblioteca).
 
-- [ ] 2. Añadir los estilos de Home de `references/templates/home-about/styles.css`
+- [x] 2. Añadir los estilos de Home de `references/templates/home-about/styles.css`
          (bloque `/* ===== HOME PAGE ===== */` en adelante, excluyendo `/* ===== ABOUT PAGE ===== */`)
          a `app/globals.css`.
          Verificación: screenshot de `/games`, `/auth`, `/hall-of-fame` con Playwright — sin regresión visual.
 
-- [ ] 3. Crear `app/page.tsx` con los componentes `FloatingSilhouettes`, `FeatureIcon`,
+- [x] 3. Crear `app/page.tsx` con los componentes `FloatingSilhouettes`, `FeatureIcon`,
          `MiniCard` y `Home` migrados a TSX. CTAs con `<Link>`. Mini-rail sin `onClick`.
          La sección "Actividad en vivo" usa datos derivados de `seededScores()`.
          Verificación: abrir `/` con Playwright y comparar sección a sección contra
          `references/templates/home-about/home.jsx` cargado en `arcade-vault-standalone.html`.
          Ajustar estilos hasta lograr paridad visual pixel-perfect.
 
-- [ ] 4. Verificar navegación con Playwright: clicar cada CTA y confirmar que la URL resultante
+- [x] 4. Verificar navegación con Playwright: clicar cada CTA y confirmar que la URL resultante
          es la esperada: "EXPLORAR JUEGOS" → `/games`, "CREAR CUENTA" → `/auth`,
          "VER SALÓN →" → `/hall-of-fame`, "INSERTAR MONEDA →" → `/games`.
 
@@ -53,15 +53,15 @@
 
 ## Acceptance criteria
 
-- [ ] `/games` carga la Library sin errores; la ruta `/` ya no devuelve la Library.
-- [ ] `/` carga la Home sin errores de TypeScript ni consola.
-- [ ] La Home muestra las 7 secciones: Hero, ¿Por qué Arcade Vault?, Juegos disponibles, Stats, Actividad en vivo, Precios, CTA final.
-- [ ] El mini-rail muestra los primeros 6 juegos de `GAMES`; no navega al hacer clic.
-- [ ] La sección "Actividad en vivo" usa datos derivados de `seededScores()`, no datos hardcodeados.
-- [ ] Los 4 CTAs navegan a la ruta correcta con `<Link>` de Next.js.
-- [ ] Screenshot de Playwright de `/` es pixel-perfect respecto a la referencia `home.jsx` en `arcade-vault-standalone.html`.
-- [ ] No hay regresión visual en `/games`, `/auth` y `/hall-of-fame` tras añadir los estilos.
-- [ ] La página es navegable en viewport móvil (375px) sin scroll horizontal.
+- [x] `/games` carga la Library sin errores; la ruta `/` ya no devuelve la Library.
+- [x] `/` carga la Home sin errores de TypeScript ni consola.
+- [x] La Home muestra las 7 secciones: Hero, ¿Por qué Arcade Vault?, Juegos disponibles, Stats, Actividad en vivo, Precios, CTA final.
+- [x] El mini-rail muestra los primeros 6 juegos de `GAMES`; no navega al hacer clic.
+- [x] La sección "Actividad en vivo" usa datos derivados de `seededScores()`, no datos hardcodeados.
+- [x] Los 4 CTAs navegan a la ruta correcta con `<Link>` de Next.js.
+- [x] Screenshot de Playwright de `/` es pixel-perfect respecto a la referencia `home.jsx` en `arcade-vault-standalone.html`.
+- [x] No hay regresión visual en `/games`, `/auth` y `/hall-of-fame` tras añadir los estilos.
+- [x] La página es navegable en viewport móvil (375px) sin scroll horizontal.
 
 ---
 
