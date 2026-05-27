@@ -1,6 +1,6 @@
 # SPEC 04 — Integración Supabase
 
-> **Status:** Approve
+> **Status:** Implemented
 > **Depende de:** 03-about-contact-resend
 > **Fecha:** 2026-05-27
 > **Objetivo:** Instalar y configurar Supabase (`@supabase/supabase-js` + `@supabase/ssr`) con cliente singleton browser/server y variables de entorno documentadas, como base para specs futuros.
@@ -14,7 +14,7 @@
 - Instalar `@supabase/supabase-js` y `@supabase/ssr` con pnpm
 - Crear `lib/supabase/client.ts` — cliente browser (singleton con `createBrowserClient`)
 - Crear `lib/supabase/server.ts` — cliente server (factory con `createServerClient` + cookies de Next.js)
-- Añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` a `.env.local`
+- Añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` a `.env.local`
 - Crear `.env.example` con los mismos keys y valores placeholder
 
 **Out of scope:**
@@ -32,7 +32,7 @@
 [ ] 1. Instalar dependencias con pnpm: `@supabase/supabase-js` y `@supabase/ssr`.
 Verificación: ambas aparecen en `package.json`.
 
-[ ] 2. Añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` a `.env.local` con los valores del proyecto Supabase.
+[ ] 2. Añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` a `.env.local` con los valores del proyecto Supabase.
 Verificación: variables presentes en `.env.local`.
 
 [ ] 3. Crear `.env.example` con los mismos keys y valores placeholder (`your-supabase-url`, `your-supabase-anon-key`).
@@ -49,7 +49,7 @@ Verificación: compila sin errores (`pnpm tsc --noEmit`).
 ## Acceptance criteria
 
 [ ] `@supabase/supabase-js` y `@supabase/ssr` aparecen en `package.json`.
-[ ] `.env.local` contiene `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` con valores reales.
+[ ] `.env.local` contiene `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` con valores reales.
 [ ] `.env.example` existe en la raíz con los mismos keys y valores placeholder.
 [ ] `lib/supabase/client.ts` existe y exporta `createClient` para uso en componentes cliente.
 [ ] `lib/supabase/server.ts` existe y exporta `createClient` para uso en server components y route handlers.
