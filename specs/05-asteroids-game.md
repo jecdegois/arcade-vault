@@ -1,6 +1,6 @@
 # SPEC 05 — Integración del juego Asteroids
 
-> **Estado:** Approve   
+> **Estado:** Implementado
 > **Depende de:** 04-supabase-integration
 > **Fecha:** 2026-05-15
 > **Objetivo:** Integrar el juego Asteroids (canvas puro) como un nuevo juego jugable
@@ -99,7 +99,7 @@ No se introduce ningún modelo de datos persistente en este spec.
      genérica existente, reemplazando el `div.game-arena` placeholder por el componente canvas.
      Verificación: el HUD React muestra los valores en tiempo real mientras se juega.
 
-4. **Verificación final** — `npm run build` termina sin errores de TypeScript.
+4. **Verificación final** — `pnpm run build` termina sin errores de TypeScript.
 
 ---
 
