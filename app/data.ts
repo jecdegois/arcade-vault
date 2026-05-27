@@ -122,6 +122,19 @@ export const GAMES: Game[] = [
     difficulty: 1,
   },
   {
+    id: 'asteroids',
+    title: 'ASTEROIDS',
+    short: 'Pulveriza rocas en gravedad cero.',
+    long: 'Tu nave triangular flota en vacío absoluto. Dispara y rota para dividir rocas en fragmentos cada vez más pequeños. Supera niveles y acumula puntos antes de que los asteroides te alcancen.',
+    category: 'SHOOTER',
+    cover: 'cover-rocas',
+    color: 'yellow',
+    best: 0,
+    plays: '0',
+    players: 1,
+    difficulty: 3,
+  },
+  {
     id: 'duelo-pixel',
     title: 'DUELO PIXEL',
     short: 'Dos paletas. Una pelota. Reflejos máximos.',
@@ -137,9 +150,24 @@ export const GAMES: Game[] = [
 ];
 
 const PLAYERS = [
-  'PX_KAI', 'NEONFOX', 'Z3R0COOL', 'M00NRYU', 'VAULT_07', 'GLITCHA',
-  'ATARI_KID', 'CYBER_LU', 'MAGENTA88', 'SCANLINE', 'BIT_LORD', 'ARKADYA',
-  'DROID_X', 'RGB_QUEEN', 'PIXEL_DAD', 'RETROVIRA', 'VECTORX', 'JOY_STK',
+  'PX_KAI',
+  'NEONFOX',
+  'Z3R0COOL',
+  'M00NRYU',
+  'VAULT_07',
+  'GLITCHA',
+  'ATARI_KID',
+  'CYBER_LU',
+  'MAGENTA88',
+  'SCANLINE',
+  'BIT_LORD',
+  'ARKADYA',
+  'DROID_X',
+  'RGB_QUEEN',
+  'PIXEL_DAD',
+  'RETROVIRA',
+  'VECTORX',
+  'JOY_STK',
 ];
 
 export function seededScores(seed: number, count = 12): ScoreEntry[] {
@@ -149,15 +177,24 @@ export function seededScores(seed: number, count = 12): ScoreEntry[] {
   const rows: ScoreEntry[] = [];
   for (let i = 0; i < count; i++) {
     let name: string;
-    do { name = PLAYERS[Math.floor(rand() * PLAYERS.length)]; } while (used.has(name) && used.size < PLAYERS.length);
+    do {
+      name = PLAYERS[Math.floor(rand() * PLAYERS.length)];
+    } while (used.has(name) && used.size < PLAYERS.length);
     used.add(name);
     const base = Math.floor(50000 + rand() * 250000);
     const score = base - i * Math.floor(2000 + rand() * 4000);
     const day = String(1 + Math.floor(rand() * 28)).padStart(2, '0');
     const mon = String(1 + Math.floor(rand() * 12)).padStart(2, '0');
-    rows.push({ rank: i + 1, name, score: Math.max(score, 1000), date: `${day}/${mon}/2026` });
+    rows.push({
+      rank: i + 1,
+      name,
+      score: Math.max(score, 1000),
+      date: `${day}/${mon}/2026`,
+    });
   }
-  return rows.sort((a, b) => b.score - a.score).map((r, i) => ({ ...r, rank: i + 1 }));
+  return rows
+    .sort((a, b) => b.score - a.score)
+    .map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
 export function gameSeededScores(): AVScores {
