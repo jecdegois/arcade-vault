@@ -1,49 +1,6 @@
 import Link from 'next/link';
-import { GAMES, gameSeededScores } from './data';
-
-// --- Derived activity data from seededScores ---
-function getActivityData() {
-  const allScores = gameSeededScores();
-
-  const tickerRows = Object.entries(allScores)
-    .flatMap(([gameId, entries]) => {
-      const game = GAMES.find((g) => g.id === gameId)!;
-      return entries.slice(0, 2).map((e) => ({
-        player: e.name,
-        game: game.title,
-        score: e.score,
-        color: game.color,
-      }));
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 7);
-
-  const times = [
-    'hace 2 min',
-    'hace 5 min',
-    'hace 8 min',
-    'hace 12 min',
-    'hace 18 min',
-    'hace 24 min',
-    'hace 31 min',
-  ];
-
-  const playerBest: Record<string, number> = {};
-  Object.values(allScores).forEach((entries) =>
-    entries.forEach((e) => {
-      if (!playerBest[e.name] || playerBest[e.name] < e.score)
-        playerBest[e.name] = e.score;
-    })
-  );
-  const topPlayers = Object.entries(playerBest)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name, score], i) => ({ rank: i + 1, player: name, score }));
-
-  return { tickerRows, times, topPlayers };
-}
-
-// --- Local components ---
+import { createClient } from '../lib/supabase/server';
+import type { GameRow } from '../lib/supabase/types';
 
 function FloatingSilhouettes() {
   return (
@@ -219,7 +176,7 @@ function FeatureIcon({ kind }: { kind: string }) {
   return null;
 }
 
-function MiniCard({ game }: { game: (typeof GAMES)[number] }) {
+function MiniCard({ game }: { game: GameRow }) {
   return (
     <div className="mini-card">
       <div className="mini-cover">
@@ -227,16 +184,20 @@ function MiniCard({ game }: { game: (typeof GAMES)[number] }) {
       </div>
       <div className="mini-meta">
         <div className="mini-title">{game.title}</div>
-        <div className="mini-cat">{game.category}</div>
+        <div className="mini-cat">{game.cat}</div>
       </div>
     </div>
   );
 }
 
-// --- Page ---
-
-export default function Home() {
-  const { tickerRows, times, topPlayers } = getActivityData();
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: games } = await supabase
+    .from('games')
+    .select('*')
+    .order('created_at')
+    .limit(6);
+  const gameList: GameRow[] = games ?? [];
 
   return (
     <div className="home fade-in">
@@ -323,23 +284,25 @@ export default function Home() {
       </section>
 
       {/* GAMES PREVIEW */}
-      <section className="home-section">
-        <div className="section-head">
-          <div className="kicker pixel neon-cyan">// 02</div>
-          <h2 className="section-title">JUEGOS DISPONIBLES AHORA</h2>
-          <div className="section-rule" />
-        </div>
-        <div className="mini-rail">
-          {GAMES.slice(0, 6).map((g) => (
-            <MiniCard key={g.id} game={g} />
-          ))}
-        </div>
-        <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <Link href="/games" className="btn lg">
-            VER TODOS LOS JUEGOS →
-          </Link>
-        </div>
-      </section>
+      {gameList.length > 0 && (
+        <section className="home-section">
+          <div className="section-head">
+            <div className="kicker pixel neon-cyan">// 02</div>
+            <h2 className="section-title">JUEGOS DISPONIBLES AHORA</h2>
+            <div className="section-rule" />
+          </div>
+          <div className="mini-rail">
+            {gameList.map((g) => (
+              <MiniCard key={g.id} game={g} />
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <Link href="/games" className="btn lg">
+              VER TODOS LOS JUEGOS →
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* STATS */}
       <section className="home-stats">
@@ -362,72 +325,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* RECENT ACTIVITY */}
-      <section className="home-section">
-        <div className="section-head">
-          <div className="kicker pixel neon-yellow">// 03</div>
-          <h2 className="section-title">ACTIVIDAD EN VIVO</h2>
-          <div className="section-rule" />
-        </div>
-        <div className="activity-grid">
-          <div className="activity-card">
-            <div className="ac-head">
-              <div className="ac-title pixel">▸ ÚLTIMAS PUNTUACIONES</div>
-              <span className="live-led">
-                <span />
-              </span>
-            </div>
-            <div className="ticker">
-              {tickerRows.map((r, i) => (
-                <div
-                  key={i}
-                  className="tick-row"
-                  style={{ animationDelay: `${i * 60}ms` }}
-                >
-                  <span className={`tk-p neon-${r.color}`}>{r.player}</span>
-                  <span className="tk-mid">▸ {r.game}</span>
-                  <span className="tk-s">
-                    +{r.score.toLocaleString('es-ES')}
-                  </span>
-                  <span className="tk-t">{times[i]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="activity-card">
-            <div className="ac-head">
-              <div className="ac-title pixel neon-magenta">
-                ▸ TOP JUGADORES · HOY
-              </div>
-              <Link href="/hall-of-fame" className="lb-link">
-                VER SALÓN →
-              </Link>
-            </div>
-            <div className="top-list">
-              {topPlayers.map((r, i) => (
-                <div
-                  key={i}
-                  className={`top-row${i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : ''}`}
-                >
-                  <span className="tp-rk">
-                    #{String(r.rank).padStart(2, '0')}
-                  </span>
-                  <span className="tp-p">{r.player}</span>
-                  <span className="tp-s">
-                    {r.score.toLocaleString('es-ES')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* PRICING */}
       <section className="home-section">
         <div className="section-head">
-          <div className="kicker pixel neon-green">// 04</div>
+          <div className="kicker pixel neon-green">// 03</div>
           <h2 className="section-title">PRECIOS</h2>
           <div className="section-rule" />
         </div>

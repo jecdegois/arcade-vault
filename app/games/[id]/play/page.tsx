@@ -2,30 +2,24 @@
 
 import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { GAMES } from '../../../data';
-import { useUser } from '../../../context';
 
 type Props = { params: Promise<{ id: string }> };
 
 export default function GamePlayerPage({ params }: Props) {
   const { id } = use(params);
-  const game = GAMES.find((g) => g.id === id);
-  if (!game) notFound();
-
-  const { user } = useUser();
 
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState('INVITADO');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setPlayerName(user?.name ?? 'INVITADO');
-  }, [user]);
+    const stored = localStorage.getItem('av_player_name');
+    if (stored) setPlayerName(stored);
+  }, []);
 
   useEffect(() => {
     if (over || paused) return;
@@ -51,23 +45,19 @@ export default function GamePlayerPage({ params }: Props) {
   };
 
   const saveScore = () => {
-    const key = 'av_scores';
-    const existing = JSON.parse(localStorage.getItem(key) || '{}');
-    const entries = existing[id] || [];
-    entries.push({ player: playerName, score, date: new Date().toISOString() });
-    entries.sort((a: { score: number }, b: { score: number }) => b.score - a.score);
-    localStorage.setItem(key, JSON.stringify({ ...existing, [id]: entries }));
+    localStorage.setItem('av_player_name', playerName);
     setSaved(true);
   };
 
   return (
     <div className="av-player fade-in">
-      {/* HUD */}
       <div className="player-hud">
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <div className="hud-stat">
             <div className="l">Jugador</div>
-            <div className="v" style={{ color: 'var(--ink)' }}>{playerName}</div>
+            <div className="v" style={{ color: 'var(--ink)' }}>
+              {playerName}
+            </div>
           </div>
           <div className="hud-stat">
             <div className="l">Puntuación</div>
@@ -86,12 +76,15 @@ export default function GamePlayerPage({ params }: Props) {
           <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
             {paused ? 'REANUDAR' : 'PAUSA'}
           </button>
-          <button className="btn magenta" onClick={endGame}>FIN</button>
-          <Link href={`/games/${id}`} className="btn ghost">SALIR</Link>
+          <button className="btn magenta" onClick={endGame}>
+            FIN
+          </button>
+          <Link href={`/games/${id}`} className="btn ghost">
+            SALIR
+          </Link>
         </div>
       </div>
 
-      {/* CRT */}
       <div className="crt">
         <div className="crt-screen">
           <div className="game-arena">
@@ -102,10 +95,23 @@ export default function GamePlayerPage({ params }: Props) {
             <div className="player-ship" />
           </div>
           {paused && (
-            <div className="crt-content" style={{ background: 'rgba(0,0,0,0.6)', zIndex: 5 }}>
+            <div
+              className="crt-content"
+              style={{ background: 'rgba(0,0,0,0.6)', zIndex: 5 }}
+            >
               <div>
-                <div className="pixel neon-yellow" style={{ fontSize: 22 }}>EN PAUSA</div>
-                <div className="mono" style={{ fontSize: 11, color: 'var(--ink-dim)', marginTop: 10, letterSpacing: '0.16em' }}>
+                <div className="pixel neon-yellow" style={{ fontSize: 22 }}>
+                  EN PAUSA
+                </div>
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--ink-dim)',
+                    marginTop: 10,
+                    letterSpacing: '0.16em',
+                  }}
+                >
                   PULSA REANUDAR PARA CONTINUAR
                 </div>
               </div>
@@ -114,12 +120,11 @@ export default function GamePlayerPage({ params }: Props) {
         </div>
         <div className="crt-bottom">
           <span className="led">SEÑAL OK</span>
-          <span>{game.title} · CRT-83 · 60 HZ</span>
+          <span>{id.toUpperCase()} · CRT-83 · 60 HZ</span>
           <span>CARGA · 1MB</span>
         </div>
       </div>
 
-      {/* Game over modal */}
       {over && (
         <div className="modal-bd">
           <div className="modal">
@@ -130,17 +135,25 @@ export default function GamePlayerPage({ params }: Props) {
               <div className="input-row">
                 <input
                   value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value.toUpperCase().slice(0, 10))}
+                  onChange={(e) =>
+                    setPlayerName(e.target.value.toUpperCase().slice(0, 10))
+                  }
                   placeholder="TUS INICIALES"
                 />
-                <button className="btn yellow" onClick={saveScore}>GUARDAR PUNTUACIÓN</button>
+                <button className="btn yellow" onClick={saveScore}>
+                  GUARDAR PUNTUACIÓN
+                </button>
               </div>
             ) : (
               <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
             )}
             <div className="actions">
-              <button className="btn" onClick={restart}>JUGAR DE NUEVO</button>
-              <Link href="/" className="btn magenta">VOLVER AL VAULT</Link>
+              <button className="btn" onClick={restart}>
+                JUGAR DE NUEVO
+              </button>
+              <Link href="/games" className="btn magenta">
+                VOLVER AL VAULT
+              </Link>
             </div>
           </div>
         </div>

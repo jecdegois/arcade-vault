@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { GAMES } from '../../../data';
-import { useUser } from '../../../context';
+import { createClient } from '../../../../lib/supabase/client';
 
 const AsteroidsGame = dynamic(
   () => import('../../../components/games/AsteroidsGame'),
@@ -12,11 +11,8 @@ const AsteroidsGame = dynamic(
 );
 
 const GAME_ID = 'asteroids';
-const game = GAMES.find((g) => g.id === GAME_ID)!;
 
 export default function AsteroidsPlayPage() {
-  const { user } = useUser();
-
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
@@ -24,18 +20,15 @@ export default function AsteroidsPlayPage() {
   const [over, setOver] = useState(false);
   const [playerName, setPlayerName] = useState('INVITADO');
   const [saved, setSaved] = useState(false);
-  // Incrementing this key remounts AsteroidsGame, starting a fresh game
   const [gameKey, setGameKey] = useState(0);
-
-  useEffect(() => {
-    setPlayerName(user?.name ?? 'INVITADO');
-  }, [user]);
 
   const handleScoreChange = useCallback((s: number) => setScore(s), []);
   const handleLivesChange = useCallback((l: number) => setLives(l), []);
   const handleLevelChange = useCallback((l: number) => setLevel(l), []);
   const handleGameOver = useCallback((finalScore: number) => {
     setScore(finalScore);
+    const stored = localStorage.getItem('av_player_name');
+    if (stored) setPlayerName(stored);
     setOver(true);
   }, []);
 
@@ -49,19 +42,16 @@ export default function AsteroidsPlayPage() {
     setGameKey((k) => k + 1);
   };
 
-  const saveScore = () => {
-    const key = 'av_scores';
-    const existing = JSON.parse(localStorage.getItem(key) || '{}');
-    const entries = existing[GAME_ID] || [];
-    entries.push({ player: playerName, score, date: new Date().toISOString() });
-    entries.sort(
-      (a: { score: number }, b: { score: number }) => b.score - a.score
-    );
-    localStorage.setItem(
-      key,
-      JSON.stringify({ ...existing, [GAME_ID]: entries })
-    );
+  const saveScore = async () => {
     setSaved(true);
+    localStorage.setItem('av_player_name', playerName);
+    const supabase = createClient();
+    await supabase.from('scores').insert({
+      game_id: GAME_ID,
+      player_name: playerName,
+      score,
+      user_id: null,
+    });
   };
 
   return (
@@ -140,7 +130,7 @@ export default function AsteroidsPlayPage() {
         </div>
         <div className="crt-bottom">
           <span className="led">SEÑAL OK</span>
-          <span>{game.title} · CRT-83 · 60 HZ</span>
+          <span>ASTEROIDS · CRT-83 · 60 HZ</span>
           <span>CARGA · 1MB</span>
         </div>
       </div>
@@ -172,7 +162,7 @@ export default function AsteroidsPlayPage() {
               <button className="btn" onClick={restart}>
                 JUGAR DE NUEVO
               </button>
-              <Link href="/" className="btn magenta">
+              <Link href="/games" className="btn magenta">
                 VOLVER AL VAULT
               </Link>
             </div>
