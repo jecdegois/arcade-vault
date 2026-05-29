@@ -4,42 +4,80 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Arcade Vault** — plataforma online de juegos arcade retro donde los usuarios compiten por puntuaciones. Stack: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4 + pnpm.
+**Arcade Vault** — plataforma online de juegos arcade retro donde los usuarios compiten por puntuaciones.
 
-No hay test runner configurado todavía.
+Stack: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4 + pnpm.
+Backend: **Supabase** (`@supabase/ssr` + `@supabase/supabase-js`) para juegos y leaderboards.
+Email: **Resend** para el formulario de contacto.
+
+No hay test runner configurado todavía. Scripts: `pnpm dev`, `pnpm build`, `pnpm start`, `pnpm lint`, `pnpm format` (Prettier).
 
 ## Skills
-Usa siempre /frontend-design para hacer interfaces de usuario. 
+
+- Usa **siempre `/frontend-design`** para construir interfaces de usuario.
+- **Spec Driven Design**: `/spec` para escribir specs, `/spec-impl` para implementarlas, `/add-game` para añadir un juego nuevo. (instaladas en `.claude/skills/` y `.agents/skills/`, fijadas en `skills-lock.json` desde `Klerith/fernando-skills`).
+
+## Variables de entorno (`.env.local`, ver `.env.example`)
+
+- `RESEND_API_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_DB_PASSWORD`
+
+MCP de Supabase configurado en `.mcp.json` (proyecto `gzazmxcmbmjfetlohnyv`).
 
 ## Arquitectura
 
-### `app/` — Next.js App Router
-- `layout.tsx` — layout raíz con fuentes Geist (sans + mono) y Tailwind
-- `page.tsx` — página de inicio (aún es el scaffold por defecto de Next.js)
-- `globals.css` — estilos globales con Tailwind v4
+### `app/` — Next.js App Router (implementación principal)
 
-### `resources/templates/` — Prototipo de referencia (spec)
-Implementación completa de la UI en vanilla React sin build (cargado vía CDN en `Arcade Vault.html`). **Estas plantillas son la especificación de diseño** que debe migrarse al app de Next.js:
+- `layout.tsx` — layout raíz (fuentes Geist), envuelve la app con `UserProvider`
+- `page.tsx` — home / landing
+- `globals.css` — estilos globales Tailwind v4 + design tokens
+- `data.ts` — tipos compartidos: `Category`, `AVUser`, constante `CATS`
+- `context.tsx` — `UserProvider` / `useUser` (sesión de usuario en `localStorage:av_user`)
+- `components/Nav.tsx` — navegación top
+- `components/games/` — componentes canvas de cada juego: `AsteroidsGame`, `ArkanoidGame`, `TetrisGame`, `SnakeGame`
+- `games/page.tsx` + `games/LibraryGrid.tsx` — biblioteca (grid con filtro y búsqueda)
+- `games/[id]/page.tsx` — detalle de juego
+- `games/[id]/play/page.tsx` — reproductor genérico; `games/{asteroids,arkanoid,tetris,snake}/play/page.tsx` — reproductores específicos
+- `hall-of-fame/page.tsx` + `HallOfFameClient.tsx` — salón de la fama (leaderboard por juego)
+- `auth/page.tsx` — login/registro
+- `about/page.tsx` — página "Sobre Nosotros" con formulario de contacto
+- `api/contact/route.ts` — endpoint que envía el email del formulario vía Resend
 
-| Archivo | Componente exportado | Descripción |
-|---|---|---|
-| `data.jsx` | `GAMES`, `CATS`, `seededScores` | Mock data de 8 juegos y generador de puntuaciones |
-| `app.jsx` | `App` | Enrutador hash-based; gestiona estado global de usuario y sesión |
-| `nav.jsx` | `Nav` | Navegación top con menú móvil |
-| `biblioteca.jsx` | `Library` | Grid de tarjetas con filtro por categoría y búsqueda |
-| `detalle.jsx` | `GameDetail` | Vista detalle de un juego |
-| `reproductor.jsx` | `GamePlayer` | Pantalla de juego con registro de puntuación |
-| `auth.jsx` | `Auth` | Login/registro de usuario |
-| `salon.jsx` | `HallOfFame` | Tabla de clasificación por juego |
-| `styles.css` | — | Design tokens CSS (variables `--ink-*`, `--magenta`, `--cyan`, etc.) |
+### `lib/supabase/` — Clientes de Supabase
 
-### Flujo de navegación (del prototipo)
-`biblioteca` → `detalle` → `player` → (guarda score en `localStorage:av_scores`)  
-`biblioteca` → `salon`  
+- `client.ts` — cliente de navegador
+- `server.ts` — cliente SSR (Server Components / route handlers)
+- `types.ts` — tipos de la base de datos
+
+Los juegos y las puntuaciones se leen/escriben en Supabase (no en datos mock). Las páginas de biblioteca, detalle, hall-of-fame y los reproductores consultan Supabase.
+
+### `specs/` — Spec Driven Design (specs versionadas)
+
+`01-mvp-visual` · `02-home-page` · `03-about-contact-resend` · `04-supabase-setup` · `05-asteroids-game` · `06-games-table-leaderboard-supabase` · `07-tetris-game` · `08-arkanoid-game` · `09-snake-game`
+
+### `references/` — Material de referencia (no se ejecuta)
+
+- `templates/` — prototipo original en vanilla React (CDN): `app.jsx`, `nav.jsx`, `biblioteca.jsx`, `detalle.jsx`, `reproductor.jsx`, `auth.jsx`, `salon.jsx`, `data.jsx`, `styles.css`, `Arcade Vault.html`; subcarpeta `home-about/` con el prototipo de home + about
+- `started-games/` — implementaciones vanilla JS de referencia (`02-asteroids`, `03-tetris`, `04-arkanoid`)
+- `source-assets/` — sprites (p. ej. `snake-assets/`)
+
+### Flujo de navegación
+
+`biblioteca` → `detalle` → `play` (guarda score en Supabase)
+`biblioteca` → `hall-of-fame`
 `nav` → `auth` (login guarda usuario en `localStorage:av_user`)
+`nav` → `about` (formulario de contacto → `api/contact` → Resend)
 
 ### Categorías de juegos
+
 `ARCADE` · `PUZZLE` · `SHOOTER` · `VERSUS`
 
+### Juegos jugables (implementados)
+
+Ver lista completa y siempre actualizada en `references/implemented-games.md` (se actualiza en cuanto se añade un juego nuevo).
+
 ### Metodología
-El proyecto usa **Spec Driven Design** con los skills `/spec` y `/spec-impl`. Las plantillas en `resources/templates/` actúan como spec visual; la implementación va en `app/`.
+
+**Spec Driven Design**: cada feature parte de una spec en `specs/` (skill `/spec`), se implementa con `/spec-impl` y los juegos nuevos con `/add-game`. El prototipo en `references/templates/` es la spec visual de partida.
