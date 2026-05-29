@@ -17,6 +17,10 @@ No hay test runner configurado todavía. Scripts: `pnpm dev`, `pnpm build`, `pnp
 - Usa **siempre `/frontend-design`** para construir interfaces de usuario.
 - **Spec Driven Design**: `/spec` para escribir specs, `/spec-impl` para implementarlas, `/add-game` para añadir un juego nuevo. (instaladas en `.claude/skills/` y `.agents/skills/`, fijadas en `skills-lock.json` desde `Klerith/fernando-skills`).
 
+## Agentes (`.claude/agents/`)
+
+- **`game-planner`** — planifica, piensa y decide qué juego encaja con la plataforma (analiza huecos del catálogo, evita duplicados). Registra sus sugerencias en `references/game-suggestions-todo.md` y mantiene bitácora de peticiones previas en `.claude/agents/game-planner-memory.md`. No escribe specs ni código; al decidir, sugiere lanzar `/add-game <id>`.
+
 ## Variables de entorno (`.env.local`, ver `.env.example`)
 
 - `RESEND_API_KEY`
