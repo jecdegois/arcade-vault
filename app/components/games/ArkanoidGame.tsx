@@ -14,6 +14,74 @@ const BASE_BALL_VX = 200;
 const BASE_BALL_VY = -300;
 const EXPLOSION_DURATION = 150;
 
+// ── Skin system ───────────────────────────────────────────────────────────────
+
+export type SkinId = 'classic' | 'neon' | 'retro';
+
+interface ArkanoidSkin {
+  bg: string;
+  useSprites: boolean; // classic uses PNG spritesheet; neon/retro use geometry
+  paddle: string;
+  ball: string;
+  blockColors: Record<string, string>;
+  glow: boolean;
+  glowColor: string;
+}
+
+const SKINS: Record<SkinId, ArkanoidSkin> = {
+  classic: {
+    bg: '#000000',
+    useSprites: true,
+    paddle: '#ffffff',
+    ball: '#ffffff',
+    blockColors: {
+      red: '#e57373',
+      yellow: '#ffd54f',
+      cyan: '#4dd0e1',
+      magenta: '#ba68c8',
+      hotpink: '#f06292',
+      green: '#81c784',
+      gray: '#9e9e9e',
+    },
+    glow: false,
+    glowColor: '',
+  },
+  neon: {
+    bg: '#0a0a0f',
+    useSprites: false,
+    paddle: '#00f5ff',
+    ball: '#f5ff00',
+    blockColors: {
+      red: '#ff006e',
+      yellow: '#f5ff00',
+      cyan: '#00f5ff',
+      magenta: '#aa00ff',
+      hotpink: '#ff4488',
+      green: '#00ff88',
+      gray: '#8888ff',
+    },
+    glow: true,
+    glowColor: '#00f5ff',
+  },
+  retro: {
+    bg: '#001400',
+    useSprites: false,
+    paddle: '#33ff33',
+    ball: '#88ff88',
+    blockColors: {
+      red: '#44ff44',
+      yellow: '#aaff44',
+      cyan: '#33ff99',
+      magenta: '#66ff66',
+      hotpink: '#88ffaa',
+      green: '#00cc44',
+      gray: '#55bb55',
+    },
+    glow: false,
+    glowColor: '',
+  },
+};
+
 // ── Spritesheet data ─────────────────────────────────────────────────────────
 
 type Frame = { sx: number; sy: number; sw: number; sh: number };
@@ -141,6 +209,7 @@ export interface ArkanoidGameProps {
   onLivesChange: (lives: number) => void;
   onLevelChange: (level: number) => void;
   onGameOver: (finalScore: number) => void;
+  skin?: SkinId;
 }
 
 export default function ArkanoidGame({
@@ -149,6 +218,7 @@ export default function ArkanoidGame({
   onLivesChange,
   onLevelChange,
   onGameOver,
+  skin = 'classic',
 }: ArkanoidGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -158,6 +228,7 @@ export default function ArkanoidGame({
   const onLevelRef = useRef(onLevelChange);
   const onGameOverRef = useRef(onGameOver);
   const lastTimePauseRef = useRef<number | null>(null);
+  const skinRef = useRef<SkinId>(skin);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -174,6 +245,9 @@ export default function ArkanoidGame({
   useEffect(() => {
     onGameOverRef.current = onGameOver;
   }, [onGameOver]);
+  useEffect(() => {
+    skinRef.current = skin;
+  }, [skin]);
 
   // Reset lastTime when unpausing so the loop doesn't accumulate a huge dt
   useEffect(() => {
@@ -237,6 +311,51 @@ export default function ArkanoidGame({
       const sp = SPRITES[name];
       if (!sp) return;
       drawFrame(sp, x, y, w, h);
+    }
+
+    // ── Geometric draw helpers (neon / retro) ────────────────────────────────
+    function drawGeomBlock(
+      color: string,
+      x: number,
+      y: number,
+      w: number,
+      h: number
+    ) {
+      const s = SKINS[skinRef.current];
+      if (s.glow) {
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = color;
+      }
+      ctx.fillStyle = color;
+      ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+      ctx.shadowBlur = 0;
+      // Top highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(x + 1, y + 1, w - 2, 4);
+    }
+
+    function drawGeomPaddle(x: number, y: number, w: number, h: number) {
+      const s = SKINS[skinRef.current];
+      if (s.glow) {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = s.paddle;
+      }
+      ctx.fillStyle = s.paddle;
+      ctx.fillRect(x, y, w, h);
+      ctx.shadowBlur = 0;
+    }
+
+    function drawGeomBall(x: number, y: number, w: number, h: number) {
+      const s = SKINS[skinRef.current];
+      if (s.glow) {
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = s.ball;
+      }
+      ctx.fillStyle = s.ball;
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + h / 2, w / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
 
     // ── Game state ───────────────────────────────────────────────────────────
@@ -408,31 +527,71 @@ export default function ArkanoidGame({
     }
 
     function draw() {
-      ctx.fillStyle = '#000';
+      const s = SKINS[skinRef.current];
+
+      ctx.fillStyle = s.bg;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      for (const block of blocks) {
-        if (block.alive)
-          drawSprite(
-            'block_' + block.color,
-            block.x,
-            block.y,
-            block.w,
-            block.h
+      // Retro scanlines
+      if (skinRef.current === 'retro') {
+        for (let y = 0; y < canvas.height; y += 3) {
+          ctx.fillStyle = 'rgba(0,0,0,0.18)';
+          ctx.fillRect(0, y, canvas.width, 1);
+        }
+      }
+
+      if (s.useSprites) {
+        // Classic: use PNG sprites
+        for (const block of blocks) {
+          if (block.alive)
+            drawSprite(
+              'block_' + block.color,
+              block.x,
+              block.y,
+              block.w,
+              block.h
+            );
+        }
+        for (const exp of explosions) {
+          const frameIndex = Math.min(
+            Math.floor((exp.elapsed / EXPLOSION_DURATION) * 4),
+            3
           );
+          const frames = EXPLOSION_FRAMES[exp.color];
+          if (frames) drawFrame(frames[frameIndex], exp.x, exp.y, exp.w, exp.h);
+        }
+        drawSprite('paddle', paddle.x, paddle.y, paddle.w, paddle.h);
+        drawSprite('ball', ball.x, ball.y, ball.w, ball.h);
+      } else {
+        // Neon / Retro: geometric render
+        for (const block of blocks) {
+          if (block.alive) {
+            const color = s.blockColors[block.color] ?? s.paddle;
+            drawGeomBlock(color, block.x, block.y, block.w, block.h);
+          }
+        }
+        // Geometric explosion flash
+        for (const exp of explosions) {
+          const progress = exp.elapsed / EXPLOSION_DURATION;
+          const color = s.blockColors[exp.color] ?? s.paddle;
+          ctx.globalAlpha = 1 - progress;
+          ctx.fillStyle = color;
+          if (s.glow) {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = color;
+          }
+          ctx.fillRect(
+            exp.x + progress * 10,
+            exp.y + progress * 4,
+            exp.w * (1 - progress * 0.5),
+            exp.h * (1 - progress * 0.5)
+          );
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        }
+        drawGeomPaddle(paddle.x, paddle.y, paddle.w, paddle.h);
+        drawGeomBall(ball.x, ball.y, ball.w, ball.h);
       }
-
-      for (const exp of explosions) {
-        const frameIndex = Math.min(
-          Math.floor((exp.elapsed / EXPLOSION_DURATION) * 4),
-          3
-        );
-        const frames = EXPLOSION_FRAMES[exp.color];
-        if (frames) drawFrame(frames[frameIndex], exp.x, exp.y, exp.w, exp.h);
-      }
-
-      drawSprite('paddle', paddle.x, paddle.y, paddle.w, paddle.h);
-      drawSprite('ball', ball.x, ball.y, ball.w, ball.h);
     }
 
     // ── Game loop ────────────────────────────────────────────────────────────
@@ -529,7 +688,7 @@ export default function ArkanoidGame({
         width: '100%',
         height: '100%',
         objectFit: 'contain',
-        background: '#000',
+        background: SKINS[skin].bg,
       }}
     />
   );

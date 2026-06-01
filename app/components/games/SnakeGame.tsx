@@ -15,6 +15,59 @@ const INTERVAL_STEP = 10;
 const SCORE_PER_FRUIT = 10;
 const POINTS_PER_LEVEL = 50;
 
+// ── Skin system ───────────────────────────────────────────────────────────────
+
+export type SkinId = 'classic' | 'neon' | 'retro';
+
+interface SnakeSkin {
+  bg: string;
+  grid: string;
+  headColor: string;
+  // body gradient from-to (head→tail)
+  bodyFrom: [number, number, number];
+  bodyTo: [number, number, number];
+  eyeColor: string;
+  fruitFallback: string;
+  glow: boolean;
+  glowColor: string;
+}
+
+const SKINS: Record<SkinId, SnakeSkin> = {
+  classic: {
+    bg: '#0a1628',
+    grid: 'rgba(255,255,255,0.04)',
+    headColor: '#39ff14',
+    bodyFrom: [57, 255, 20],
+    bodyTo: [20, 110, 10],
+    eyeColor: '#0a1628',
+    fruitFallback: '#ff4d6a',
+    glow: false,
+    glowColor: '',
+  },
+  neon: {
+    bg: '#0a0a0f',
+    grid: 'rgba(0,245,255,0.06)',
+    headColor: '#00f5ff',
+    bodyFrom: [0, 245, 255],
+    bodyTo: [0, 50, 100],
+    eyeColor: '#0a0a0f',
+    fruitFallback: '#ff006e',
+    glow: true,
+    glowColor: '#00f5ff',
+  },
+  retro: {
+    bg: '#001a00',
+    grid: 'rgba(0,180,0,0.08)',
+    headColor: '#33ff33',
+    bodyFrom: [51, 255, 51],
+    bodyTo: [0, 80, 0],
+    eyeColor: '#001a00',
+    fruitFallback: '#88ff44',
+    glow: false,
+    glowColor: '',
+  },
+};
+
 // ── Sprite atlas (inlined from public/games/snake/sprites.js) ─────────────────
 
 type SpriteFrame = { x: number; y: number; w: number; h: number };
@@ -58,6 +111,7 @@ export interface SnakeGameProps {
   onScoreChange: (score: number) => void;
   onLevelChange: (level: number) => void;
   onGameOver: (finalScore: number) => void;
+  skin?: SkinId;
 }
 
 export default function SnakeGame({
@@ -65,6 +119,7 @@ export default function SnakeGame({
   onScoreChange,
   onLevelChange,
   onGameOver,
+  skin = 'classic',
 }: SnakeGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -72,6 +127,7 @@ export default function SnakeGame({
   const onScoreRef = useRef(onScoreChange);
   const onLevelRef = useRef(onLevelChange);
   const onGameOverRef = useRef(onGameOver);
+  const skinRef = useRef<SkinId>(skin);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -85,6 +141,9 @@ export default function SnakeGame({
   useEffect(() => {
     onGameOverRef.current = onGameOver;
   }, [onGameOver]);
+  useEffect(() => {
+    skinRef.current = skin;
+  }, [skin]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -139,12 +198,22 @@ export default function SnakeGame({
 
     // ── Draw ─────────────────────────────────────────────────────────────────
     function draw() {
+      const s = SKINS[skinRef.current];
+
       // Background
-      ctx.fillStyle = '#0a1628';
+      ctx.fillStyle = s.bg;
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
+      // Retro scanlines
+      if (skinRef.current === 'retro') {
+        for (let y = 0; y < CANVAS_H; y += 3) {
+          ctx.fillStyle = 'rgba(0,0,0,0.18)';
+          ctx.fillRect(0, y, CANVAS_W, 1);
+        }
+      }
+
       // Subtle grid
-      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.strokeStyle = s.grid;
       ctx.lineWidth = 1;
       for (let c = 0; c <= COLS; c++) {
         ctx.beginPath();
@@ -176,7 +245,7 @@ export default function SnakeGame({
           CELL - 8
         );
       } else {
-        ctx.fillStyle = '#ff4d6a';
+        ctx.fillStyle = s.fruitFallback;
         ctx.beginPath();
         ctx.arc(fx + CELL / 2, fy + CELL / 2, CELL / 3, 0, Math.PI * 2);
         ctx.fill();
@@ -188,13 +257,21 @@ export default function SnakeGame({
         const isHead = i === 0;
         const t = i / len;
 
-        if (isHead) {
-          ctx.fillStyle = '#39ff14';
+        if (s.glow && isHead) {
+          ctx.shadowBlur = 14;
+          ctx.shadowColor = s.glowColor;
         } else {
-          // gradient: neon green → dark green toward tail
-          const r = Math.round(57 + (20 - 57) * t);
-          const g = Math.round(255 + (110 - 255) * t);
-          const b = Math.round(20 + (10 - 20) * t);
+          ctx.shadowBlur = 0;
+        }
+
+        if (isHead) {
+          ctx.fillStyle = s.headColor;
+        } else {
+          const [r1, g1, b1] = s.bodyFrom;
+          const [r2, g2, b2] = s.bodyTo;
+          const r = Math.round(r1 + (r2 - r1) * t);
+          const g = Math.round(g1 + (g2 - g1) * t);
+          const b = Math.round(b1 + (b2 - b1) * t);
           ctx.fillStyle = `rgb(${r},${g},${b})`;
         }
 
@@ -205,10 +282,11 @@ export default function SnakeGame({
           CELL - pad * 2,
           CELL - pad * 2
         );
+        ctx.shadowBlur = 0;
 
         // Eyes on head
         if (isHead) {
-          ctx.fillStyle = '#0a1628';
+          ctx.fillStyle = s.eyeColor;
           const ex = seg.x * CELL;
           const ey = seg.y * CELL;
           if (dir.dx === 1) {
@@ -340,7 +418,7 @@ export default function SnakeGame({
       style={{
         display: 'block',
         margin: '0 auto',
-        background: '#0a1628',
+        background: SKINS[skin].bg,
       }}
     />
   );

@@ -6,17 +6,69 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const RETRO_COLORS: (string | null)[] = [
-  null,
-  '#4dd0e1',
-  '#ffd54f',
-  '#ba68c8',
-  '#81c784',
-  '#e57373',
-  '#90caf9',
-  '#ffb74d',
-  '#9e9e9e',
-];
+export type SkinId = 'classic' | 'neon' | 'retro';
+
+interface TetrisSkin {
+  bg: string;
+  grid: string;
+  colors: (string | null)[];
+  highlight: string;
+  glow: boolean;
+}
+
+const SKINS: Record<SkinId, TetrisSkin> = {
+  classic: {
+    bg: 'transparent',
+    grid: 'rgba(255,255,255,0.06)',
+    colors: [
+      null,
+      '#4dd0e1',
+      '#ffd54f',
+      '#ba68c8',
+      '#81c784',
+      '#e57373',
+      '#90caf9',
+      '#ffb74d',
+      '#9e9e9e',
+    ],
+    highlight: 'rgba(255,255,255,0.12)',
+    glow: false,
+  },
+  neon: {
+    bg: '#0a0a0f',
+    grid: 'rgba(0,245,255,0.08)',
+    colors: [
+      null,
+      '#00f5ff',
+      '#f5ff00',
+      '#ff006e',
+      '#00ff88',
+      '#ff4400',
+      '#aa44ff',
+      '#ff9900',
+      '#ffffff',
+    ],
+    highlight: 'rgba(255,255,255,0.25)',
+    glow: true,
+  },
+  retro: {
+    bg: '#001400',
+    grid: 'rgba(0,180,0,0.1)',
+    colors: [
+      null,
+      '#33ff33',
+      '#aaff44',
+      '#66dd00',
+      '#00cc44',
+      '#55ff88',
+      '#88ffaa',
+      '#ccff66',
+      '#44bb44',
+    ],
+    highlight: 'rgba(255,255,255,0.08)',
+    glow: false,
+  },
+};
 
 const PIECES: (number[][] | null)[] = [
   null,
@@ -70,6 +122,7 @@ export interface TetrisGameProps {
   onLinesChange: (lines: number) => void;
   onLevelChange: (level: number) => void;
   onGameOver: (finalScore: number) => void;
+  skin?: SkinId;
 }
 
 export default function TetrisGame({
@@ -78,6 +131,7 @@ export default function TetrisGame({
   onLinesChange,
   onLevelChange,
   onGameOver,
+  skin = 'classic',
 }: TetrisGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nextCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,6 +141,7 @@ export default function TetrisGame({
   const onLinesRef = useRef(onLinesChange);
   const onLevelRef = useRef(onLevelChange);
   const onGameOverRef = useRef(onGameOver);
+  const skinRef = useRef<SkinId>(skin);
 
   const startLoopRef = useRef<(() => void) | null>(null);
   const stopLoopRef = useRef<(() => void) | null>(null);
@@ -106,6 +161,9 @@ export default function TetrisGame({
   useEffect(() => {
     onGameOverRef.current = onGameOver;
   }, [onGameOver]);
+  useEffect(() => {
+    skinRef.current = skin;
+  }, [skin]);
 
   useEffect(() => {
     if (paused) {
@@ -265,19 +323,34 @@ export default function TetrisGame({
       alpha = 1
     ) {
       if (!colorIndex) return;
-      const color = RETRO_COLORS[colorIndex] as string;
+      const activeSkin = SKINS[skinRef.current];
+      const color = activeSkin.colors[colorIndex] as string;
       context.globalAlpha = alpha;
+      if (activeSkin.glow && alpha > 0.5) {
+        context.shadowBlur = 10;
+        context.shadowColor = color;
+      }
       context.fillStyle = color;
       context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.shadowBlur = 0;
+      context.fillStyle = activeSkin.highlight;
       context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
       context.globalAlpha = 1;
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const activeSkin = SKINS[skinRef.current];
 
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      // Background
+      if (activeSkin.bg === 'transparent') {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = activeSkin.bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // Grid lines
+      ctx.strokeStyle = activeSkin.grid;
       ctx.lineWidth = 0.5;
       for (let c = 1; c < COLS; c++) {
         ctx.beginPath();
@@ -290,6 +363,14 @@ export default function TetrisGame({
         ctx.moveTo(0, r * BLOCK);
         ctx.lineTo(COLS * BLOCK, r * BLOCK);
         ctx.stroke();
+      }
+
+      // Retro scanlines
+      if (skinRef.current === 'retro') {
+        for (let y = 0; y < ROWS * BLOCK; y += 3) {
+          ctx.fillStyle = 'rgba(0,0,0,0.15)';
+          ctx.fillRect(0, y, COLS * BLOCK, 1);
+        }
       }
 
       for (let r = 0; r < ROWS; r++)
@@ -320,8 +401,14 @@ export default function TetrisGame({
     }
 
     function drawNext() {
+      const activeSkin = SKINS[skinRef.current];
       const NB = 30;
-      nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+      if (activeSkin.bg === 'transparent') {
+        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+      } else {
+        nextCtx.fillStyle = activeSkin.bg;
+        nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+      }
       const shape = next.shape;
       const offX = Math.floor((4 - shape[0].length) / 2);
       const offY = Math.floor((4 - shape.length) / 2);

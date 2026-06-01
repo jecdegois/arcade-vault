@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { createClient } from '../../../../lib/supabase/client';
+import type { SkinId } from '../../../components/games/ArkanoidGame';
 
 const ArkanoidGame = dynamic(
   () => import('../../../components/games/ArkanoidGame'),
@@ -11,6 +12,12 @@ const ArkanoidGame = dynamic(
 );
 
 const GAME_ID = 'arkanoid';
+const SKIN_KEY = 'av_skin_arkanoid';
+const SKIN_OPTIONS: { id: SkinId; label: string; icon: string }[] = [
+  { id: 'classic', label: 'CLASSIC', icon: '◆' },
+  { id: 'neon', label: 'NEON', icon: '✦' },
+  { id: 'retro', label: 'RETRO', icon: '▣' },
+];
 
 export default function ArkanoidPlayPage() {
   const [score, setScore] = useState(0);
@@ -21,6 +28,18 @@ export default function ArkanoidPlayPage() {
   const [playerName, setPlayerName] = useState('INVITADO');
   const [saved, setSaved] = useState(false);
   const [gameKey, setGameKey] = useState(0);
+  const [skin, setSkin] = useState<SkinId>('classic');
+
+  useEffect(() => {
+    const stored = localStorage.getItem(SKIN_KEY) as SkinId | null;
+    if (stored && ['classic', 'neon', 'retro'].includes(stored))
+      setSkin(stored);
+  }, []);
+
+  const handleSkinChange = (s: SkinId) => {
+    setSkin(s);
+    localStorage.setItem(SKIN_KEY, s);
+  };
 
   const handleScoreChange = useCallback((s: number) => setScore(s), []);
   const handleLivesChange = useCallback((l: number) => setLives(l), []);
@@ -79,6 +98,39 @@ export default function ArkanoidPlayPage() {
           </div>
         </div>
         <div className="hud-actions">
+          {/* Skin selector */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 2,
+              border: '1px solid var(--line)',
+              padding: 2,
+            }}
+          >
+            {SKIN_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => handleSkinChange(opt.id)}
+                style={{
+                  fontFamily: 'var(--pixel)',
+                  fontSize: 8,
+                  letterSpacing: '0.1em',
+                  padding: '6px 8px',
+                  background:
+                    skin === opt.id ? 'rgba(0,245,255,0.15)' : 'transparent',
+                  border: 'none',
+                  color: skin === opt.id ? 'var(--cyan)' : 'var(--ink-dim)',
+                  cursor: 'pointer',
+                  textShadow:
+                    skin === opt.id ? '0 0 8px rgba(0,245,255,0.7)' : 'none',
+                  transition: 'color 120ms, background 120ms',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {opt.icon} {opt.label}
+              </button>
+            ))}
+          </div>
           <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
             {paused ? 'REANUDAR' : 'PAUSA'}
           </button>
@@ -97,6 +149,7 @@ export default function ArkanoidPlayPage() {
           <ArkanoidGame
             key={gameKey}
             paused={paused}
+            skin={skin}
             onScoreChange={handleScoreChange}
             onLivesChange={handleLivesChange}
             onLevelChange={handleLevelChange}
