@@ -1,6 +1,6 @@
 # SPEC — Integración del juego FROGGER (Game Jam)
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 >
 > **Depende de:** 06-games-table-leaderboard-supabase
 >
@@ -91,7 +91,7 @@ de `lib/supabase/types.ts`.
 
 1. **Seed en Supabase** — ejecutar el INSERT de la fila `frogger` en el SQL Editor de Supabase.
 
-   Verificación: la card de FROGGER aparece en `/games`.
+  Verificación: la card de FROGGER aparece en `/games`.
 2. **Crear `app/components/games/FroggerGame.tsx`** — componente `"use client"` que:
   - Renderiza un `<canvas>` de 480×640 referenciado con `useRef`.
   - Divide el canvas en 15 filas × 15 columnas (celdas de 32px); las 20 filas en eje Y quedan en canvas de 640px de alto (20 filas × 32px = 640px). Ancho: 15 columnas × 32px = 480px.
@@ -118,7 +118,7 @@ de `lib/supabase/types.ts`.
     Verificación: el HUD React muestra score, lives y level en tiempo real; tras una partida el score aparece en `/games/frogger` y en `/hall-of-fame` al recargar.
 4. **Verificación final** — `npm run build` completa sin errores de TypeScript.
 
-   Ninguna ruta existente devuelve 500.
+  Ninguna ruta existente devuelve 500.
 
 ---
 
