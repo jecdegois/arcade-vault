@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { createClient } from '../../../../lib/supabase/client';
+import type { SkinId } from '../../../components/games/AsteroidsGame';
 
 const AsteroidsGame = dynamic(
   () => import('../../../components/games/AsteroidsGame'),
@@ -11,6 +12,12 @@ const AsteroidsGame = dynamic(
 );
 
 const GAME_ID = 'asteroids';
+const SKIN_KEY = 'av_skin_asteroids';
+const SKIN_OPTIONS: { id: SkinId; label: string; icon: string }[] = [
+  { id: 'classic', label: 'CLASSIC', icon: '◆' },
+  { id: 'neon', label: 'NEON', icon: '✦' },
+  { id: 'retro', label: 'RETRO', icon: '▣' },
+];
 
 export default function AsteroidsPlayPage() {
   const [score, setScore] = useState(0);
@@ -21,6 +28,17 @@ export default function AsteroidsPlayPage() {
   const [playerName, setPlayerName] = useState('INVITADO');
   const [saved, setSaved] = useState(false);
   const [gameKey, setGameKey] = useState(0);
+  const [skin, setSkin] = useState<SkinId>('classic');
+
+  useEffect(() => {
+    const saved = localStorage.getItem(SKIN_KEY) as SkinId | null;
+    if (saved && ['classic', 'neon', 'retro'].includes(saved)) setSkin(saved);
+  }, []);
+
+  const handleSkinChange = (s: SkinId) => {
+    setSkin(s);
+    localStorage.setItem(SKIN_KEY, s);
+  };
 
   const handleScoreChange = useCallback((s: number) => setScore(s), []);
   const handleLivesChange = useCallback((l: number) => setLives(l), []);
@@ -81,6 +99,39 @@ export default function AsteroidsPlayPage() {
           </div>
         </div>
         <div className="hud-actions">
+          {/* Skin selector */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 2,
+              border: '1px solid var(--line)',
+              padding: 2,
+            }}
+          >
+            {SKIN_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => handleSkinChange(opt.id)}
+                style={{
+                  fontFamily: 'var(--pixel)',
+                  fontSize: 8,
+                  letterSpacing: '0.1em',
+                  padding: '6px 8px',
+                  background:
+                    skin === opt.id ? 'rgba(0,245,255,0.15)' : 'transparent',
+                  border: 'none',
+                  color: skin === opt.id ? 'var(--cyan)' : 'var(--ink-dim)',
+                  cursor: 'pointer',
+                  textShadow:
+                    skin === opt.id ? '0 0 8px rgba(0,245,255,0.7)' : 'none',
+                  transition: 'color 120ms, background 120ms',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {opt.icon} {opt.label}
+              </button>
+            ))}
+          </div>
           <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
             {paused ? 'REANUDAR' : 'PAUSA'}
           </button>
@@ -99,6 +150,7 @@ export default function AsteroidsPlayPage() {
           <AsteroidsGame
             key={gameKey}
             paused={paused}
+            skin={skin}
             onScoreChange={handleScoreChange}
             onLivesChange={handleLivesChange}
             onLevelChange={handleLevelChange}
