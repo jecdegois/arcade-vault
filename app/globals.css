@@ -927,6 +927,17 @@ a { color: inherit; text-decoration: none; }
   .av-player { padding: 0 16px 32px; }
 }
 
+@media (max-width: 767px) {
+  .crt-screen {
+    aspect-ratio: unset;
+    height: auto;
+  }
+  .crt-screen canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+
 /* misc */
 .divider { height: 1px; background: var(--line); margin: 8px 0; }
 .fade-in { animation: fadeIn 240ms ease-out; }
