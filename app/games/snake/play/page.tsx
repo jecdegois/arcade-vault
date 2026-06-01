@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { createClient } from '../../../../lib/supabase/client';
 import type { SkinId } from '../../../components/games/SnakeGame';
+import MobileGamepad from '../../../components/MobileGamepad';
 
 const SnakeGame = dynamic(() => import('../../../components/games/SnakeGame'), {
   ssr: false,
@@ -71,72 +72,75 @@ export default function SnakePlayPage() {
 
   return (
     <div className="av-player fade-in">
-      {/* HUD */}
-      <div className="player-hud">
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          <div className="hud-stat">
-            <div className="l">Jugador</div>
-            <div className="v" style={{ color: 'var(--ink)' }}>
-              {playerName}
+      {/* HUD — oculto en móvil */}
+      <div className="hidden md:block">
+        <div className="player-hud">
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            <div className="hud-stat">
+              <div className="l">Jugador</div>
+              <div className="v" style={{ color: 'var(--ink)' }}>
+                {playerName}
+              </div>
+            </div>
+            <div className="hud-stat">
+              <div className="l">Puntuación</div>
+              <div className="v">{score.toLocaleString('es-ES')}</div>
+            </div>
+            <div className="hud-stat level">
+              <div className="l">Nivel</div>
+              <div className="v">{String(level).padStart(2, '0')}</div>
             </div>
           </div>
-          <div className="hud-stat">
-            <div className="l">Puntuación</div>
-            <div className="v">{score.toLocaleString('es-ES')}</div>
+          <div className="hud-actions">
+            {/* Skin selector */}
+            <div
+              style={{
+                display: 'flex',
+                gap: 2,
+                border: '1px solid var(--line)',
+                padding: 2,
+              }}
+            >
+              {SKIN_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => handleSkinChange(opt.id)}
+                  style={{
+                    fontFamily: 'var(--pixel)',
+                    fontSize: 8,
+                    letterSpacing: '0.1em',
+                    padding: '6px 8px',
+                    background:
+                      skin === opt.id ? 'rgba(0,245,255,0.15)' : 'transparent',
+                    border: 'none',
+                    color: skin === opt.id ? 'var(--cyan)' : 'var(--ink-dim)',
+                    cursor: 'pointer',
+                    textShadow:
+                      skin === opt.id ? '0 0 8px rgba(0,245,255,0.7)' : 'none',
+                    transition: 'color 120ms, background 120ms',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {opt.icon} {opt.label}
+                </button>
+              ))}
+            </div>
+            <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
+              {paused ? 'REANUDAR' : 'PAUSA'}
+            </button>
+            <button className="btn magenta" onClick={() => setOver(true)}>
+              FIN
+            </button>
+            <Link href={`/games/${GAME_ID}`} className="btn ghost">
+              SALIR
+            </Link>
           </div>
-          <div className="hud-stat level">
-            <div className="l">Nivel</div>
-            <div className="v">{String(level).padStart(2, '0')}</div>
-          </div>
-        </div>
-        <div className="hud-actions">
-          {/* Skin selector */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 2,
-              border: '1px solid var(--line)',
-              padding: 2,
-            }}
-          >
-            {SKIN_OPTIONS.map((opt) => (
-              <button
-                key={opt.id}
-                onClick={() => handleSkinChange(opt.id)}
-                style={{
-                  fontFamily: 'var(--pixel)',
-                  fontSize: 8,
-                  letterSpacing: '0.1em',
-                  padding: '6px 8px',
-                  background:
-                    skin === opt.id ? 'rgba(0,245,255,0.15)' : 'transparent',
-                  border: 'none',
-                  color: skin === opt.id ? 'var(--cyan)' : 'var(--ink-dim)',
-                  cursor: 'pointer',
-                  textShadow:
-                    skin === opt.id ? '0 0 8px rgba(0,245,255,0.7)' : 'none',
-                  transition: 'color 120ms, background 120ms',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {opt.icon} {opt.label}
-              </button>
-            ))}
-          </div>
-          <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
-            {paused ? 'REANUDAR' : 'PAUSA'}
-          </button>
-          <button className="btn magenta" onClick={() => setOver(true)}>
-            FIN
-          </button>
-          <Link href={`/games/${GAME_ID}`} className="btn ghost">
-            SALIR
-          </Link>
         </div>
       </div>
+      {/* /hidden md:block */}
 
       {/* CRT */}
-      <div className="crt">
+      <div className="crt w-full h-auto max-w-[800px] mx-auto">
         <div className="crt-screen">
           <SnakeGame
             key={gameKey}
@@ -176,6 +180,13 @@ export default function SnakePlayPage() {
           <span>CARGA · 1MB</span>
         </div>
       </div>
+      <MobileGamepad
+        keyMap={{ up: 'w', down: 's', left: 'a', right: 'd' }}
+        paused={paused}
+        onPauseToggle={() => setPaused((p) => !p)}
+        skin={skin}
+        onSkinChange={(s) => handleSkinChange(s as SkinId)}
+      />
 
       {/* Game over modal */}
       {over && (
