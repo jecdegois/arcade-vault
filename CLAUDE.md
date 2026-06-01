@@ -21,6 +21,7 @@ No hay test runner configurado todavía. Scripts: `pnpm dev`, `pnpm build`, `pnp
 
 - **`game-planner`** — planifica, piensa y decide qué juego encaja con la plataforma (analiza huecos del catálogo, evita duplicados). Registra sus sugerencias en `references/game-suggestions-todo.md` y mantiene bitácora de peticiones previas en `.claude/agents/game-planner-memory.md`. No escribe specs ni código; al decidir, sugiere lanzar `/add-game <id>`.
 - **`game-jam`** — dado un **tema**, decide autónomamente un juego arcade que encaje y escribe 1 spec completo en `specs/game-jam/<game-id>/<game-id>.md`. Prioriza `references/started-games/`; si ninguno encaja, diseña el juego desde cero. No escribe código; el spec se implementa con `/spec-impl`.
+- **`skin-designer`** — dado el id de un juego, garantiza ≥3 skins seleccionables (`classic`=default, `neon`, `retro`) con colores + fondo + efectos; refactoriza el componente canvas y añade un selector con persistencia (`localStorage:av_skin_<id>`) en el reproductor. Implementa código. Mantiene bitácora en `.claude/agents/skin-designer-memory.md`.
 
 ## Variables de entorno (`.env.local`, ver `.env.example`)
 
