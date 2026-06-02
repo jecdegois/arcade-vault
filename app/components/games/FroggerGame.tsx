@@ -162,6 +162,60 @@ export default function FroggerGame({
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
 
+    // ── Offscreen canvas: static background ───────────────────────────────────
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = CANVAS_W;
+    bgCanvas.height = CANVAS_H;
+    const bgCtx = bgCanvas.getContext('2d')!;
+    const bgState = { lastSkin: null as SkinId | null };
+
+    // ── Offscreen canvas: retro scanlines (built once, skin-independent) ──────
+    const scanlineCanvas = document.createElement('canvas');
+    scanlineCanvas.width = CANVAS_W;
+    scanlineCanvas.height = CANVAS_H;
+    const slCtx = scanlineCanvas.getContext('2d')!;
+    for (let y = 0; y < CANVAS_H; y += 3) {
+      slCtx.fillStyle = 'rgba(0,0,0,0.15)';
+      slCtx.fillRect(0, y, CANVAS_W, 1);
+    }
+
+    function buildBgCanvas(s: FroggerSkin) {
+      // Zone backgrounds
+      for (let r = 0; r < ROWS; r++) {
+        let bg: string;
+        if (r === DEST_ROW) bg = s.grass;
+        else if (r === SAFE_TOP) bg = s.grass;
+        else if (r >= WATER_START && r <= WATER_END) bg = s.water;
+        else if (r === MEDIAN_ROW) bg = s.grass;
+        else if (r >= ROAD_START && r <= ROAD_END) bg = s.road;
+        else bg = s.grass;
+        bgCtx.fillStyle = bg;
+        bgCtx.fillRect(0, r * CELL, CANVAS_W, CELL);
+      }
+      // Road lane dividers
+      bgCtx.setLineDash([6, 6]);
+      bgCtx.strokeStyle = 'rgba(255,255,255,0.12)';
+      bgCtx.lineWidth = 1;
+      for (let r = ROAD_START; r <= ROAD_END; r++) {
+        const y = r * CELL + CELL / 2;
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, y);
+        bgCtx.lineTo(CANVAS_W, y);
+        bgCtx.stroke();
+      }
+      bgCtx.setLineDash([]);
+      // Water ripple lines
+      bgCtx.strokeStyle = 'rgba(100,160,255,0.18)';
+      bgCtx.lineWidth = 1;
+      for (let r = WATER_START; r <= WATER_END; r++) {
+        const y = r * CELL + CELL / 2;
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, y);
+        bgCtx.lineTo(CANVAS_W, y);
+        bgCtx.stroke();
+      }
+    }
+
     // ── Game state ────────────────────────────────────────────────────────────
     let score = 0;
     let lives = 3;
@@ -397,76 +451,22 @@ export default function FroggerGame({
 
     // ── Draw ─────────────────────────────────────────────────────────────────
     function draw() {
-      const s = SKINS[skinRef.current];
+      const currentSkin = skinRef.current;
+      const s = SKINS[currentSkin];
 
-      // Zone backgrounds
-      for (let r = 0; r < ROWS; r++) {
-        let bg: string;
-        if (r === DEST_ROW) bg = s.grass;
-        else if (r === SAFE_TOP) bg = s.grass;
-        else if (r >= WATER_START && r <= WATER_END) bg = s.water;
-        else if (r === MEDIAN_ROW) bg = s.grass;
-        else if (r >= ROAD_START && r <= ROAD_END) bg = s.road;
-        else bg = s.grass;
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, r * CELL, CANVAS_W, CELL);
+      // Rebuild bg offscreen canvas when skin changes, then blit
+      if (currentSkin !== bgState.lastSkin) {
+        buildBgCanvas(s);
+        bgState.lastSkin = currentSkin;
+      }
+      ctx.drawImage(bgCanvas, 0, 0);
+
+      // Retro scanlines: single drawImage from prebuilt offscreen canvas
+      if (currentSkin === 'retro') {
+        ctx.drawImage(scanlineCanvas, 0, 0);
       }
 
-      // Retro scanlines
-      if (skinRef.current === 'retro') {
-        for (let y = 0; y < CANVAS_H; y += 3) {
-          ctx.fillStyle = 'rgba(0,0,0,0.15)';
-          ctx.fillRect(0, y, CANVAS_W, 1);
-        }
-      }
-
-      // Road lane dividers
-      ctx.setLineDash([6, 6]);
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = 1;
-      for (let r = ROAD_START; r <= ROAD_END; r++) {
-        const y = r * CELL + CELL / 2;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(CANVAS_W, y);
-        ctx.stroke();
-      }
-      ctx.setLineDash([]);
-
-      // Water ripple lines
-      ctx.strokeStyle = 'rgba(100,160,255,0.18)';
-      ctx.lineWidth = 1;
-      for (let r = WATER_START; r <= WATER_END; r++) {
-        const y = r * CELL + CELL / 2;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(CANVAS_W, y);
-        ctx.stroke();
-      }
-
-      // Destination homes
-      for (let i = 0; i < HOME_COLS.length; i++) {
-        const hx = HOME_COLS[i] * CELL;
-        const hy = DEST_ROW * CELL;
-        ctx.fillStyle = homesFilled[i] ? s.homeFilled : s.homeEmpty;
-        ctx.fillRect(hx + 2, hy + 2, CELL - 4, CELL - 4);
-        ctx.fillStyle = homesFilled[i]
-          ? 'rgba(255,255,255,0.3)'
-          : 'rgba(255,255,255,0.06)';
-        ctx.beginPath();
-        ctx.arc(hx + CELL / 2, hy + CELL / 2, 7, 0, Math.PI * 2);
-        ctx.fill();
-        if (s.glow && homesFilled[i]) {
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = s.homeFilled;
-          ctx.beginPath();
-          ctx.arc(hx + CELL / 2, hy + CELL / 2, 7, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        }
-      }
-
-      // Platforms (logs and turtles)
+      // Platforms (logs and turtles) — no glow
       for (const p of platforms) {
         const px = normX(p.x);
         const py = p.row * CELL;
@@ -474,7 +474,6 @@ export default function FroggerGame({
 
         const drawPlatRect = (lx: number, lw: number) => {
           ctx.fillRect(lx, py + 3, lw, CELL - 6);
-          // Segment detail
           ctx.fillStyle =
             p.type === 'log'
               ? 'rgba(255,200,150,0.25)'
@@ -494,7 +493,7 @@ export default function FroggerGame({
         }
       }
 
-      // Cars
+      // Cars — no glow
       for (const car of cars) {
         const cx = normX(car.x);
         const cy = car.row * CELL;
@@ -515,44 +514,84 @@ export default function FroggerGame({
         }
       }
 
-      // Frog
-      if (!gameOverFired) {
-        const fy = frogRow * CELL;
-        const fx = Math.max(0, Math.min(CANVAS_W - CELL, frogX));
-
-        if (s.glow) {
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = s.frog;
-        }
-        ctx.fillStyle = s.frog;
-        ctx.fillRect(fx + 4, fy + 5, CELL - 8, CELL - 10);
-        ctx.shadowBlur = 0;
-
-        // Eyes
-        ctx.fillStyle = s.frogEye;
-        ctx.fillRect(fx + 6, fy + 7, 4, 4);
-        ctx.fillRect(fx + CELL - 10, fy + 7, 4, 4);
-
-        // Legs hint
-        ctx.fillStyle = s.frog;
-        ctx.fillRect(fx + 1, fy + 14, 4, 8);
-        ctx.fillRect(fx + CELL - 5, fy + 14, 4, 8);
+      // Destination homes base (no glow)
+      for (let i = 0; i < HOME_COLS.length; i++) {
+        const hx = HOME_COLS[i] * CELL;
+        const hy = DEST_ROW * CELL;
+        ctx.fillStyle = homesFilled[i] ? s.homeFilled : s.homeEmpty;
+        ctx.fillRect(hx + 2, hy + 2, CELL - 4, CELL - 4);
+        ctx.fillStyle = homesFilled[i]
+          ? 'rgba(255,255,255,0.3)'
+          : 'rgba(255,255,255,0.06)';
+        ctx.beginPath();
+        ctx.arc(hx + CELL / 2, hy + CELL / 2, 7, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      // HUD: home indicators strip at bottom of DEST_ROW
-      // already shown by the homes themselves above
+      // Frog position (used both in non-glow and glow sections)
+      let frogFx = 0;
+      let frogFy = 0;
+      if (!gameOverFired) {
+        frogFy = frogRow * CELL;
+        frogFx = Math.max(0, Math.min(CANVAS_W - CELL, frogX));
+        // Frog body — non-neon only
+        if (!s.glow) {
+          ctx.fillStyle = s.frog;
+          ctx.fillRect(frogFx + 4, frogFy + 5, CELL - 8, CELL - 10);
+        }
+      }
 
-      // Time bar at very bottom of canvas
+      // Timer bar background (always) + bar (non-neon only)
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, CANVAS_H - 7, CANVAS_W, 7);
-      const barW = (Math.max(0, timeLeft) / TIMER_MAX) * CANVAS_W;
-      ctx.fillStyle = timeLeft > 10 ? s.timerOk : s.timerLow;
-      if (s.glow) {
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = timeLeft > 10 ? s.timerOk : s.timerLow;
+      if (!s.glow) {
+        const barW = (Math.max(0, timeLeft) / TIMER_MAX) * CANVAS_W;
+        ctx.fillStyle = timeLeft > 10 ? s.timerOk : s.timerLow;
+        ctx.fillRect(0, CANVAS_H - 7, barW, 7);
       }
-      ctx.fillRect(0, CANVAS_H - 7, barW, 7);
-      ctx.shadowBlur = 0;
+
+      // ── Neon glow pass — ONE activation, ONE deactivation ──────────────────
+      if (s.glow) {
+        ctx.shadowBlur = 12; // ← single activation
+        // Filled homes glow arcs
+        ctx.shadowColor = s.homeFilled;
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        for (let i = 0; i < HOME_COLS.length; i++) {
+          if (!homesFilled[i]) continue;
+          ctx.beginPath();
+          ctx.arc(
+            HOME_COLS[i] * CELL + CELL / 2,
+            DEST_ROW * CELL + CELL / 2,
+            7,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        }
+        // Frog body glow
+        if (!gameOverFired) {
+          ctx.shadowColor = s.frog;
+          ctx.fillStyle = s.frog;
+          ctx.fillRect(frogFx + 4, frogFy + 5, CELL - 8, CELL - 10);
+        }
+        // Timer bar glow (value change, still active)
+        ctx.shadowBlur = 6;
+        const barW = (Math.max(0, timeLeft) / TIMER_MAX) * CANVAS_W;
+        ctx.shadowColor = timeLeft > 10 ? s.timerOk : s.timerLow;
+        ctx.fillStyle = timeLeft > 10 ? s.timerOk : s.timerLow;
+        ctx.fillRect(0, CANVAS_H - 7, barW, 7);
+        ctx.shadowBlur = 0; // ← single deactivation
+      }
+
+      // Frog eyes + legs (always drawn after glow reset — never glowing)
+      if (!gameOverFired) {
+        ctx.fillStyle = s.frogEye;
+        ctx.fillRect(frogFx + 6, frogFy + 7, 4, 4);
+        ctx.fillRect(frogFx + CELL - 10, frogFy + 7, 4, 4);
+        ctx.fillStyle = s.frog;
+        ctx.fillRect(frogFx + 1, frogFy + 14, 4, 8);
+        ctx.fillRect(frogFx + CELL - 5, frogFy + 14, 4, 8);
+      }
     }
 
     // ── Keyboard ──────────────────────────────────────────────────────────────
