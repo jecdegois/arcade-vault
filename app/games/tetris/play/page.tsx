@@ -88,11 +88,14 @@ export default function TetrisPlayPage() {
     setSaved(true);
     localStorage.setItem('av_player_name', playerName);
     const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     await supabase.from('scores').insert({
       game_id: GAME_ID,
       player_name: playerName,
       score: scoreRef.current,
-      user_id: null,
+      user_id: session?.user.id ?? null,
     });
   };
 

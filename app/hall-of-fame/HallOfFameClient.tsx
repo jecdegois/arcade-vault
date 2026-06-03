@@ -25,7 +25,7 @@ export function HallOfFameClient({ games }: { games: GameRow[] }) {
       .eq('game_id', tab)
       .order('score', { ascending: false })
       .limit(12)
-      .then(({ data }) => {
+      .then(({ data }: { data: ScoreRow[] | null }) => {
         setScores(data ?? []);
         setLoading(false);
       });
