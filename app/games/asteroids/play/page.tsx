@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { createClient } from '../../../../lib/supabase/client';
@@ -21,9 +21,15 @@ const SKIN_OPTIONS: { id: SkinId; label: string; icon: string }[] = [
 ];
 
 export default function AsteroidsPlayPage() {
-  const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(3);
-  const [level, setLevel] = useState(1);
+  // HUD values as refs — updated via textContent to avoid re-renders during gameplay
+  const scoreRef = useRef(0);
+  const livesRef = useRef(3);
+  const levelRef = useRef(1);
+  const scoreElRef = useRef<HTMLDivElement>(null);
+  const livesElRef = useRef<HTMLDivElement>(null);
+  const levelElRef = useRef<HTMLDivElement>(null);
+
+  // Only state that controls JSX tree shape
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [playerName, setPlayerName] = useState('INVITADO');
@@ -32,8 +38,9 @@ export default function AsteroidsPlayPage() {
   const [skin, setSkin] = useState<SkinId>('classic');
 
   useEffect(() => {
-    const saved = localStorage.getItem(SKIN_KEY) as SkinId | null;
-    if (saved && ['classic', 'neon', 'retro'].includes(saved)) setSkin(saved);
+    const stored = localStorage.getItem(SKIN_KEY) as SkinId | null;
+    if (stored && ['classic', 'neon', 'retro'].includes(stored))
+      setSkin(stored);
   }, []);
 
   const handleSkinChange = (s: SkinId) => {
@@ -41,20 +48,37 @@ export default function AsteroidsPlayPage() {
     localStorage.setItem(SKIN_KEY, s);
   };
 
-  const handleScoreChange = useCallback((s: number) => setScore(s), []);
-  const handleLivesChange = useCallback((l: number) => setLives(l), []);
-  const handleLevelChange = useCallback((l: number) => setLevel(l), []);
+  const handleScoreChange = useCallback((s: number) => {
+    scoreRef.current = s;
+    if (scoreElRef.current)
+      scoreElRef.current.textContent = s.toLocaleString('es-ES');
+  }, []);
+  const handleLivesChange = useCallback((l: number) => {
+    livesRef.current = l;
+    if (livesElRef.current)
+      livesElRef.current.textContent = l > 0 ? '♥ '.repeat(l).trim() : '—';
+  }, []);
+  const handleLevelChange = useCallback((l: number) => {
+    levelRef.current = l;
+    if (levelElRef.current)
+      levelElRef.current.textContent = String(l).padStart(2, '0');
+  }, []);
   const handleGameOver = useCallback((finalScore: number) => {
-    setScore(finalScore);
+    scoreRef.current = finalScore;
+    if (scoreElRef.current)
+      scoreElRef.current.textContent = finalScore.toLocaleString('es-ES');
     const stored = localStorage.getItem('av_player_name');
     if (stored) setPlayerName(stored);
     setOver(true);
   }, []);
 
   const restart = () => {
-    setScore(0);
-    setLives(3);
-    setLevel(1);
+    scoreRef.current = 0;
+    livesRef.current = 3;
+    levelRef.current = 1;
+    if (scoreElRef.current) scoreElRef.current.textContent = '0';
+    if (livesElRef.current) livesElRef.current.textContent = '♥ ♥ ♥';
+    if (levelElRef.current) levelElRef.current.textContent = '01';
     setPaused(false);
     setOver(false);
     setSaved(false);
@@ -68,7 +92,7 @@ export default function AsteroidsPlayPage() {
     await supabase.from('scores').insert({
       game_id: GAME_ID,
       player_name: playerName,
-      score,
+      score: scoreRef.current,
       user_id: null,
     });
   };
@@ -87,17 +111,25 @@ export default function AsteroidsPlayPage() {
             </div>
             <div className="hud-stat">
               <div className="l">Puntuación</div>
-              <div className="v">{score.toLocaleString('es-ES')}</div>
+              <div className="v" ref={scoreElRef}>
+                0
+              </div>
             </div>
             <div className="hud-stat lives">
               <div className="l">Vidas</div>
-              <div className="v">
-                {'♥ '.repeat(Math.max(lives, 0)).trim() || '—'}
+              <div
+                className="v"
+                style={{ color: 'var(--magenta)' }}
+                ref={livesElRef}
+              >
+                ♥ ♥ ♥
               </div>
             </div>
             <div className="hud-stat level">
               <div className="l">Nivel</div>
-              <div className="v">{String(level).padStart(2, '0')}</div>
+              <div className="v" ref={levelElRef}>
+                01
+              </div>
             </div>
           </div>
           <div className="hud-actions">
@@ -210,7 +242,9 @@ export default function AsteroidsPlayPage() {
           <div className="modal">
             <h2>FIN DEL JUEGO</h2>
             <div className="final-label">PUNTUACIÓN FINAL</div>
-            <div className="final">{score.toLocaleString('es-ES')}</div>
+            <div className="final">
+              {scoreRef.current.toLocaleString('es-ES')}
+            </div>
             {!saved ? (
               <div className="input-row">
                 <input

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { createClient } from '../../../../lib/supabase/client';
@@ -21,9 +21,15 @@ const SKIN_OPTIONS: { id: SkinId; label: string; icon: string }[] = [
 ];
 
 export default function TetrisPlayPage() {
-  const [score, setScore] = useState(0);
-  const [lines, setLines] = useState(0);
-  const [level, setLevel] = useState(1);
+  // HUD values as refs — updated via textContent to avoid re-renders during gameplay
+  const scoreRef = useRef(0);
+  const linesRef = useRef(0);
+  const levelRef = useRef(1);
+  const scoreElRef = useRef<HTMLDivElement>(null);
+  const linesElRef = useRef<HTMLDivElement>(null);
+  const levelElRef = useRef<HTMLDivElement>(null);
+
+  // Only state that controls JSX tree shape
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [playerName, setPlayerName] = useState('INVITADO');
@@ -42,20 +48,36 @@ export default function TetrisPlayPage() {
     localStorage.setItem(SKIN_KEY, s);
   };
 
-  const handleScoreChange = useCallback((s: number) => setScore(s), []);
-  const handleLinesChange = useCallback((l: number) => setLines(l), []);
-  const handleLevelChange = useCallback((l: number) => setLevel(l), []);
+  const handleScoreChange = useCallback((s: number) => {
+    scoreRef.current = s;
+    if (scoreElRef.current)
+      scoreElRef.current.textContent = s.toLocaleString('es-ES');
+  }, []);
+  const handleLinesChange = useCallback((l: number) => {
+    linesRef.current = l;
+    if (linesElRef.current) linesElRef.current.textContent = String(l);
+  }, []);
+  const handleLevelChange = useCallback((l: number) => {
+    levelRef.current = l;
+    if (levelElRef.current)
+      levelElRef.current.textContent = String(l).padStart(2, '0');
+  }, []);
   const handleGameOver = useCallback((finalScore: number) => {
-    setScore(finalScore);
+    scoreRef.current = finalScore;
+    if (scoreElRef.current)
+      scoreElRef.current.textContent = finalScore.toLocaleString('es-ES');
     const stored = localStorage.getItem('av_player_name');
     if (stored) setPlayerName(stored);
     setOver(true);
   }, []);
 
   const restart = () => {
-    setScore(0);
-    setLines(0);
-    setLevel(1);
+    scoreRef.current = 0;
+    linesRef.current = 0;
+    levelRef.current = 1;
+    if (scoreElRef.current) scoreElRef.current.textContent = '0';
+    if (linesElRef.current) linesElRef.current.textContent = '0';
+    if (levelElRef.current) levelElRef.current.textContent = '01';
     setPaused(false);
     setOver(false);
     setSaved(false);
@@ -69,7 +91,7 @@ export default function TetrisPlayPage() {
     await supabase.from('scores').insert({
       game_id: GAME_ID,
       player_name: playerName,
-      score,
+      score: scoreRef.current,
       user_id: null,
     });
   };
@@ -88,15 +110,21 @@ export default function TetrisPlayPage() {
             </div>
             <div className="hud-stat">
               <div className="l">Puntuación</div>
-              <div className="v">{score.toLocaleString('es-ES')}</div>
+              <div className="v" ref={scoreElRef}>
+                0
+              </div>
             </div>
             <div className="hud-stat">
               <div className="l">Líneas</div>
-              <div className="v">{lines}</div>
+              <div className="v" ref={linesElRef}>
+                0
+              </div>
             </div>
             <div className="hud-stat level">
               <div className="l">Nivel</div>
-              <div className="v">{String(level).padStart(2, '0')}</div>
+              <div className="v" ref={levelElRef}>
+                01
+              </div>
             </div>
           </div>
           <div className="hud-actions">
@@ -210,7 +238,9 @@ export default function TetrisPlayPage() {
           <div className="modal">
             <h2>FIN DEL JUEGO</h2>
             <div className="final-label">PUNTUACIÓN FINAL</div>
-            <div className="final">{score.toLocaleString('es-ES')}</div>
+            <div className="final">
+              {scoreRef.current.toLocaleString('es-ES')}
+            </div>
             {!saved ? (
               <div className="input-row">
                 <input
