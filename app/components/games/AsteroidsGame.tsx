@@ -109,6 +109,28 @@ export default function AsteroidsGame({
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
 
+    // ── Offscreen canvas: static background ───────────────────────────────────
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = W;
+    bgCanvas.height = H;
+    const bgCtx = bgCanvas.getContext('2d')!;
+    const bgState = { lastSkin: null as SkinId | null };
+
+    function buildBgCanvas(s: AsteroidsSkin) {
+      bgCtx.fillStyle = s.bg;
+      bgCtx.fillRect(0, 0, W, H);
+    }
+
+    // ── Offscreen canvas: retro scanlines (built once, skin-independent) ──────
+    const scanlineCanvas = document.createElement('canvas');
+    scanlineCanvas.width = W;
+    scanlineCanvas.height = H;
+    const slCtx = scanlineCanvas.getContext('2d')!;
+    for (let y = 0; y < H; y += 3) {
+      slCtx.fillStyle = 'rgba(0,0,0,0.18)';
+      slCtx.fillRect(0, y, W, 1);
+    }
+
     // ── Utils ──────────────────────────────────────────────────────────────────
     const wrap = (v: number, max: number) => ((v % max) + max) % max;
     const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
@@ -172,15 +194,10 @@ export default function AsteroidsGame({
       }
       draw() {
         const s = SKINS[skinRef.current];
-        if (s.glow) {
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = s.bullet;
-        }
         ctx.fillStyle = s.bullet;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
       }
     }
 
@@ -233,10 +250,6 @@ export default function AsteroidsGame({
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rot);
-        if (s.glow) {
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = s.asteroid;
-        }
         ctx.strokeStyle = s.asteroid;
         ctx.lineWidth = 1.5;
         ctx.lineJoin = 'round';
@@ -246,7 +259,6 @@ export default function AsteroidsGame({
           ctx.lineTo(this.verts[i][0], this.verts[i][1]);
         ctx.closePath();
         ctx.stroke();
-        ctx.shadowBlur = 0;
         ctx.restore();
       }
     }
@@ -313,10 +325,6 @@ export default function AsteroidsGame({
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
-        if (s.glow) {
-          ctx.shadowBlur = 14;
-          ctx.shadowColor = s.ship;
-        }
         ctx.strokeStyle = s.ship;
         ctx.lineWidth = 1.5;
         ctx.lineJoin = 'round';
@@ -327,7 +335,6 @@ export default function AsteroidsGame({
         ctx.lineTo(-12, 9);
         ctx.closePath();
         ctx.stroke();
-        ctx.shadowBlur = 0;
         if (this.thrusting && Math.random() > 0.35) {
           ctx.beginPath();
           ctx.moveTo(-8, -4);
@@ -551,24 +558,79 @@ export default function AsteroidsGame({
     }
 
     function draw() {
-      const s = SKINS[skinRef.current];
-      ctx.fillStyle = s.bg;
-      ctx.fillRect(0, 0, W, H);
+      const currentSkin = skinRef.current;
+      const s = SKINS[currentSkin];
 
-      // Retro scanlines overlay
-      if (skinRef.current === 'retro') {
-        for (let y = 0; y < H; y += 3) {
-          ctx.fillStyle = 'rgba(0,0,0,0.18)';
-          ctx.fillRect(0, y, W, 1);
-        }
+      // Rebuild bg offscreen canvas when skin changes, then blit
+      if (currentSkin !== bgState.lastSkin) {
+        buildBgCanvas(s);
+        bgState.lastSkin = currentSkin;
+      }
+      ctx.drawImage(bgCanvas, 0, 0);
+
+      // Retro scanlines: single drawImage from prebuilt offscreen canvas
+      if (currentSkin === 'retro') {
+        ctx.drawImage(scanlineCanvas, 0, 0);
       }
 
+      // Normal pass — no shadowBlur
       particles.forEach((p) => p.draw());
       asteroids.forEach((a) => a.draw());
       bullets.forEach((b) => b.draw());
       ship.draw();
       drawHUD();
-      // GAME OVER overlay removed — the React modal handles it
+
+      // ── Neon glow pass — ONE activation, ONE deactivation ──────────────────
+      if (s.glow) {
+        ctx.shadowBlur = 12; // ← single activation
+        ctx.shadowColor = s.asteroid;
+        asteroids.forEach((a) => {
+          ctx.save();
+          ctx.translate(a.x, a.y);
+          ctx.rotate(a.rot);
+          ctx.strokeStyle = s.asteroid;
+          ctx.lineWidth = 1.5;
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(a.verts[0][0], a.verts[0][1]);
+          for (let i = 1; i < a.verts.length; i++)
+            ctx.lineTo(a.verts[i][0], a.verts[i][1]);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.restore();
+        });
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = s.bullet;
+        ctx.fillStyle = s.bullet;
+        bullets.forEach((b) => {
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        if (!ship.dead) {
+          const visible =
+            ship.invincible <= 0 || Math.floor(ship.invincible * 8) % 2 !== 0;
+          if (visible) {
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = s.ship;
+            ctx.save();
+            ctx.translate(ship.x, ship.y);
+            ctx.rotate(ship.angle);
+            ctx.strokeStyle = s.ship;
+            ctx.lineWidth = 1.5;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(20, 0);
+            ctx.lineTo(-12, -9);
+            ctx.lineTo(-7, 0);
+            ctx.lineTo(-12, 9);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        ctx.shadowBlur = 0; // ← single deactivation
+      }
     }
 
     // ── Loop ───────────────────────────────────────────────────────────────────

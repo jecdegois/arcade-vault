@@ -258,6 +258,28 @@ export default function ArkanoidGame({
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
 
+    // ── Offscreen canvas: static background ───────────────────────────────────
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = 800;
+    bgCanvas.height = 600;
+    const bgCtx = bgCanvas.getContext('2d')!;
+    const bgState = { lastSkin: null as SkinId | null };
+
+    function buildBgCanvas(s: ArkanoidSkin) {
+      bgCtx.fillStyle = s.bg;
+      bgCtx.fillRect(0, 0, 800, 600);
+    }
+
+    // ── Offscreen canvas: retro scanlines (built once, skin-independent) ──────
+    const scanlineCanvas = document.createElement('canvas');
+    scanlineCanvas.width = 800;
+    scanlineCanvas.height = 600;
+    const slCtx = scanlineCanvas.getContext('2d')!;
+    for (let y = 0; y < 600; y += 3) {
+      slCtx.fillStyle = 'rgba(0,0,0,0.18)';
+      slCtx.fillRect(0, y, 800, 1);
+    }
+
     // ── Spritesheet loading ──────────────────────────────────────────────────
     const alive = { current: true }; // set to false on cleanup to prevent stale async callbacks
     let ssCanvas: HTMLCanvasElement | null = null;
@@ -321,41 +343,24 @@ export default function ArkanoidGame({
       w: number,
       h: number
     ) {
-      const s = SKINS[skinRef.current];
-      if (s.glow) {
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = color;
-      }
       ctx.fillStyle = color;
       ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
-      ctx.shadowBlur = 0;
-      // Top highlight
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
       ctx.fillRect(x + 1, y + 1, w - 2, 4);
     }
 
     function drawGeomPaddle(x: number, y: number, w: number, h: number) {
       const s = SKINS[skinRef.current];
-      if (s.glow) {
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = s.paddle;
-      }
       ctx.fillStyle = s.paddle;
       ctx.fillRect(x, y, w, h);
-      ctx.shadowBlur = 0;
     }
 
     function drawGeomBall(x: number, y: number, w: number, h: number) {
       const s = SKINS[skinRef.current];
-      if (s.glow) {
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = s.ball;
-      }
       ctx.fillStyle = s.ball;
       ctx.beginPath();
       ctx.arc(x + w / 2, y + h / 2, w / 2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
     }
 
     // ── Game state ───────────────────────────────────────────────────────────
@@ -527,17 +532,19 @@ export default function ArkanoidGame({
     }
 
     function draw() {
-      const s = SKINS[skinRef.current];
+      const currentSkin = skinRef.current;
+      const s = SKINS[currentSkin];
 
-      ctx.fillStyle = s.bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Rebuild bg offscreen canvas when skin changes, then blit
+      if (currentSkin !== bgState.lastSkin) {
+        buildBgCanvas(s);
+        bgState.lastSkin = currentSkin;
+      }
+      ctx.drawImage(bgCanvas, 0, 0);
 
-      // Retro scanlines
-      if (skinRef.current === 'retro') {
-        for (let y = 0; y < canvas.height; y += 3) {
-          ctx.fillStyle = 'rgba(0,0,0,0.18)';
-          ctx.fillRect(0, y, canvas.width, 1);
-        }
+      // Retro scanlines: single drawImage from prebuilt offscreen canvas
+      if (currentSkin === 'retro') {
+        ctx.drawImage(scanlineCanvas, 0, 0);
       }
 
       if (s.useSprites) {
@@ -563,34 +570,73 @@ export default function ArkanoidGame({
         drawSprite('paddle', paddle.x, paddle.y, paddle.w, paddle.h);
         drawSprite('ball', ball.x, ball.y, ball.w, ball.h);
       } else {
-        // Neon / Retro: geometric render
+        // Neon / Retro: geometric render — no glow
         for (const block of blocks) {
           if (block.alive) {
             const color = s.blockColors[block.color] ?? s.paddle;
             drawGeomBlock(color, block.x, block.y, block.w, block.h);
           }
         }
-        // Geometric explosion flash
+        // Geometric explosion flash — no glow
         for (const exp of explosions) {
           const progress = exp.elapsed / EXPLOSION_DURATION;
           const color = s.blockColors[exp.color] ?? s.paddle;
           ctx.globalAlpha = 1 - progress;
           ctx.fillStyle = color;
-          if (s.glow) {
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = color;
-          }
           ctx.fillRect(
             exp.x + progress * 10,
             exp.y + progress * 4,
             exp.w * (1 - progress * 0.5),
             exp.h * (1 - progress * 0.5)
           );
-          ctx.shadowBlur = 0;
           ctx.globalAlpha = 1;
         }
         drawGeomPaddle(paddle.x, paddle.y, paddle.w, paddle.h);
         drawGeomBall(ball.x, ball.y, ball.w, ball.h);
+
+        // ── Neon glow pass — ONE activation, ONE deactivation ────────────────
+        if (s.glow) {
+          ctx.shadowBlur = 8; // ← single activation
+          for (const block of blocks) {
+            if (!block.alive) continue;
+            const color = s.blockColors[block.color] ?? s.paddle;
+            ctx.shadowColor = color;
+            ctx.fillStyle = color;
+            ctx.fillRect(block.x + 1, block.y + 1, block.w - 2, block.h - 2);
+          }
+          ctx.shadowBlur = 20;
+          for (const exp of explosions) {
+            const progress = exp.elapsed / EXPLOSION_DURATION;
+            const color = s.blockColors[exp.color] ?? s.paddle;
+            ctx.shadowColor = color;
+            ctx.globalAlpha = 1 - progress;
+            ctx.fillStyle = color;
+            ctx.fillRect(
+              exp.x + progress * 10,
+              exp.y + progress * 4,
+              exp.w * (1 - progress * 0.5),
+              exp.h * (1 - progress * 0.5)
+            );
+            ctx.globalAlpha = 1;
+          }
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = s.paddle;
+          ctx.fillStyle = s.paddle;
+          ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = s.ball;
+          ctx.fillStyle = s.ball;
+          ctx.beginPath();
+          ctx.arc(
+            ball.x + ball.w / 2,
+            ball.y + ball.h / 2,
+            ball.w / 2,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          ctx.shadowBlur = 0; // ← single deactivation
+        }
       }
     }
 

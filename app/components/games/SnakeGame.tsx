@@ -149,6 +149,42 @@ export default function SnakeGame({
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
 
+    // ── Offscreen canvas: static background ───────────────────────────────────
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = CANVAS_W;
+    bgCanvas.height = CANVAS_H;
+    const bgCtx = bgCanvas.getContext('2d')!;
+    const bgState = { lastSkin: null as SkinId | null };
+
+    function buildBgCanvas(s: SnakeSkin) {
+      bgCtx.fillStyle = s.bg;
+      bgCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      bgCtx.strokeStyle = s.grid;
+      bgCtx.lineWidth = 1;
+      for (let c = 0; c <= COLS; c++) {
+        bgCtx.beginPath();
+        bgCtx.moveTo(c * CELL, 0);
+        bgCtx.lineTo(c * CELL, CANVAS_H);
+        bgCtx.stroke();
+      }
+      for (let r = 0; r <= ROWS; r++) {
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, r * CELL);
+        bgCtx.lineTo(CANVAS_W, r * CELL);
+        bgCtx.stroke();
+      }
+    }
+
+    // ── Offscreen canvas: retro scanlines (built once, skin-independent) ──────
+    const scanlineCanvas = document.createElement('canvas');
+    scanlineCanvas.width = CANVAS_W;
+    scanlineCanvas.height = CANVAS_H;
+    const slCtx = scanlineCanvas.getContext('2d')!;
+    for (let y = 0; y < CANVAS_H; y += 3) {
+      slCtx.fillStyle = 'rgba(0,0,0,0.18)';
+      slCtx.fillRect(0, y, CANVAS_W, 1);
+    }
+
     // ── Fruit image ──────────────────────────────────────────────────────────
     const alive = { current: true };
     const fruitImg = new Image();
@@ -198,34 +234,19 @@ export default function SnakeGame({
 
     // ── Draw ─────────────────────────────────────────────────────────────────
     function draw() {
-      const s = SKINS[skinRef.current];
+      const currentSkin = skinRef.current;
+      const s = SKINS[currentSkin];
 
-      // Background
-      ctx.fillStyle = s.bg;
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-      // Retro scanlines
-      if (skinRef.current === 'retro') {
-        for (let y = 0; y < CANVAS_H; y += 3) {
-          ctx.fillStyle = 'rgba(0,0,0,0.18)';
-          ctx.fillRect(0, y, CANVAS_W, 1);
-        }
+      // Rebuild bg offscreen canvas when skin changes, then blit
+      if (currentSkin !== bgState.lastSkin) {
+        buildBgCanvas(s);
+        bgState.lastSkin = currentSkin;
       }
+      ctx.drawImage(bgCanvas, 0, 0);
 
-      // Subtle grid
-      ctx.strokeStyle = s.grid;
-      ctx.lineWidth = 1;
-      for (let c = 0; c <= COLS; c++) {
-        ctx.beginPath();
-        ctx.moveTo(c * CELL, 0);
-        ctx.lineTo(c * CELL, CANVAS_H);
-        ctx.stroke();
-      }
-      for (let r = 0; r <= ROWS; r++) {
-        ctx.beginPath();
-        ctx.moveTo(0, r * CELL);
-        ctx.lineTo(CANVAS_W, r * CELL);
-        ctx.stroke();
+      // Retro scanlines: single drawImage from prebuilt offscreen canvas
+      if (currentSkin === 'retro') {
+        ctx.drawImage(scanlineCanvas, 0, 0);
       }
 
       // Fruit
@@ -251,18 +272,11 @@ export default function SnakeGame({
         ctx.fill();
       }
 
-      // Snake
+      // Snake — no glow pass
       const len = Math.max(snake.length - 1, 1);
       snake.forEach((seg, i) => {
         const isHead = i === 0;
         const t = i / len;
-
-        if (s.glow && isHead) {
-          ctx.shadowBlur = 14;
-          ctx.shadowColor = s.glowColor;
-        } else {
-          ctx.shadowBlur = 0;
-        }
 
         if (isHead) {
           ctx.fillStyle = s.headColor;
@@ -282,7 +296,6 @@ export default function SnakeGame({
           CELL - pad * 2,
           CELL - pad * 2
         );
-        ctx.shadowBlur = 0;
 
         // Eyes on head
         if (isHead) {
@@ -304,6 +317,16 @@ export default function SnakeGame({
           }
         }
       });
+
+      // ── Neon glow pass — ONE activation, ONE deactivation ──────────────────
+      if (s.glow && snake.length > 0) {
+        const head = snake[0];
+        ctx.shadowBlur = 14; // ← single activation
+        ctx.shadowColor = s.glowColor;
+        ctx.fillStyle = s.headColor;
+        ctx.fillRect(head.x * CELL + 2, head.y * CELL + 2, CELL - 4, CELL - 4);
+        ctx.shadowBlur = 0; // ← single deactivation
+      }
     }
 
     // ── Game step ────────────────────────────────────────────────────────────

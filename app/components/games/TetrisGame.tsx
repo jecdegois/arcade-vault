@@ -179,6 +179,46 @@ export default function TetrisGame({
     const nextCanvas = nextCanvasRef.current!;
     const nextCtx = nextCanvas.getContext('2d')!;
 
+    // ── Offscreen canvas: static background + grid ────────────────────────────
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = COLS * BLOCK;
+    bgCanvas.height = ROWS * BLOCK;
+    const bgCtx = bgCanvas.getContext('2d')!;
+    const bgState = { lastSkin: null as SkinId | null };
+
+    function buildBgCanvas(s: TetrisSkin) {
+      if (s.bg === 'transparent') {
+        bgCtx.clearRect(0, 0, COLS * BLOCK, ROWS * BLOCK);
+      } else {
+        bgCtx.fillStyle = s.bg;
+        bgCtx.fillRect(0, 0, COLS * BLOCK, ROWS * BLOCK);
+      }
+      bgCtx.strokeStyle = s.grid;
+      bgCtx.lineWidth = 0.5;
+      for (let c = 1; c < COLS; c++) {
+        bgCtx.beginPath();
+        bgCtx.moveTo(c * BLOCK, 0);
+        bgCtx.lineTo(c * BLOCK, ROWS * BLOCK);
+        bgCtx.stroke();
+      }
+      for (let r = 1; r < ROWS; r++) {
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, r * BLOCK);
+        bgCtx.lineTo(COLS * BLOCK, r * BLOCK);
+        bgCtx.stroke();
+      }
+    }
+
+    // ── Offscreen canvas: retro scanlines (built once, skin-independent) ──────
+    const scanlineCanvas = document.createElement('canvas');
+    scanlineCanvas.width = COLS * BLOCK;
+    scanlineCanvas.height = ROWS * BLOCK;
+    const slCtx = scanlineCanvas.getContext('2d')!;
+    for (let y = 0; y < ROWS * BLOCK; y += 3) {
+      slCtx.fillStyle = 'rgba(0,0,0,0.15)';
+      slCtx.fillRect(0, y, COLS * BLOCK, 1);
+    }
+
     type Piece = { type: number; shape: number[][]; x: number; y: number };
 
     let board: number[][];
@@ -326,53 +366,30 @@ export default function TetrisGame({
       const activeSkin = SKINS[skinRef.current];
       const color = activeSkin.colors[colorIndex] as string;
       context.globalAlpha = alpha;
-      if (activeSkin.glow && alpha > 0.5) {
-        context.shadowBlur = 10;
-        context.shadowColor = color;
-      }
       context.fillStyle = color;
       context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-      context.shadowBlur = 0;
       context.fillStyle = activeSkin.highlight;
       context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
       context.globalAlpha = 1;
     }
 
     function draw() {
-      const activeSkin = SKINS[skinRef.current];
+      const currentSkin = skinRef.current;
+      const activeSkin = SKINS[currentSkin];
 
-      // Background
-      if (activeSkin.bg === 'transparent') {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      } else {
-        ctx.fillStyle = activeSkin.bg;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Rebuild bg offscreen canvas when skin changes, then blit
+      if (currentSkin !== bgState.lastSkin) {
+        buildBgCanvas(activeSkin);
+        bgState.lastSkin = currentSkin;
+      }
+      ctx.drawImage(bgCanvas, 0, 0);
+
+      // Retro scanlines: single drawImage from prebuilt offscreen canvas
+      if (currentSkin === 'retro') {
+        ctx.drawImage(scanlineCanvas, 0, 0);
       }
 
-      // Grid lines
-      ctx.strokeStyle = activeSkin.grid;
-      ctx.lineWidth = 0.5;
-      for (let c = 1; c < COLS; c++) {
-        ctx.beginPath();
-        ctx.moveTo(c * BLOCK, 0);
-        ctx.lineTo(c * BLOCK, ROWS * BLOCK);
-        ctx.stroke();
-      }
-      for (let r = 1; r < ROWS; r++) {
-        ctx.beginPath();
-        ctx.moveTo(0, r * BLOCK);
-        ctx.lineTo(COLS * BLOCK, r * BLOCK);
-        ctx.stroke();
-      }
-
-      // Retro scanlines
-      if (skinRef.current === 'retro') {
-        for (let y = 0; y < ROWS * BLOCK; y += 3) {
-          ctx.fillStyle = 'rgba(0,0,0,0.15)';
-          ctx.fillRect(0, y, COLS * BLOCK, 1);
-        }
-      }
-
+      // Board, ghost, current piece — no glow
       for (let r = 0; r < ROWS; r++)
         for (let c = 0; c < COLS; c++) drawBlock(ctx, c, r, board[r][c], BLOCK);
 
@@ -398,6 +415,35 @@ export default function TetrisGame({
             current.shape[r][c],
             BLOCK
           );
+
+      // ── Neon glow pass — ONE activation, ONE deactivation ──────────────────
+      if (activeSkin.glow) {
+        ctx.shadowBlur = 10; // ← single activation
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            if (!board[r][c]) continue;
+            const color = activeSkin.colors[board[r][c]] as string;
+            ctx.shadowColor = color;
+            ctx.fillStyle = color;
+            ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+          }
+        }
+        for (let r = 0; r < current.shape.length; r++) {
+          for (let c = 0; c < current.shape[r].length; c++) {
+            if (!current.shape[r][c]) continue;
+            const color = activeSkin.colors[current.shape[r][c]] as string;
+            ctx.shadowColor = color;
+            ctx.fillStyle = color;
+            ctx.fillRect(
+              (current.x + c) * BLOCK + 1,
+              (current.y + r) * BLOCK + 1,
+              BLOCK - 2,
+              BLOCK - 2
+            );
+          }
+        }
+        ctx.shadowBlur = 0; // ← single deactivation
+      }
     }
 
     function drawNext() {
