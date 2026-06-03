@@ -4,12 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUser } from '../context';
+import { createClient } from '@/lib/supabase/client';
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, setUser } = useUser();
+  const { user, loading } = useUser();
 
   const isHomeActive = pathname === '/';
   const isLibraryActive = pathname.startsWith('/games');
@@ -18,10 +19,11 @@ export default function Nav() {
 
   const closePanel = () => setOpen(false);
 
-  const handleSignOut = () => {
-    setUser(null);
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
     closePanel();
-    router.push('/');
+    router.refresh();
   };
 
   return (
@@ -61,15 +63,31 @@ export default function Nav() {
         </div>
 
         {/* Auth button */}
-        {user ? (
-          <button className="btn ghost auth-btn" onClick={handleSignOut}>
-            {user.name} ▾
-          </button>
-        ) : (
-          <Link href="/auth" className="btn auth-btn">
-            Iniciar Sesión
-          </Link>
-        )}
+        {!loading &&
+          (user ? (
+            <div className="av-user">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="av-avatar"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="av-avatar fallback">
+                  {user.name[0].toUpperCase()}
+                </div>
+              )}
+              <span className="name">{user.name}</span>
+              <button className="btn ghost" onClick={handleSignOut}>
+                Cerrar Sesión
+              </button>
+            </div>
+          ) : (
+            <Link href="/auth" className="btn auth-btn">
+              Iniciar Sesión
+            </Link>
+          ))}
 
         {/* Hamburger */}
         <button
@@ -89,7 +107,10 @@ export default function Nav() {
 
       {/* Mobile panel */}
       <aside className={`av-mobile-panel${open ? ' open' : ''}`}>
-        <div className="pixel neon-cyan" style={{ fontSize: 11, marginBottom: 16 }}>
+        <div
+          className="pixel neon-cyan"
+          style={{ fontSize: 11, marginBottom: 16 }}
+        >
           MENÚ
         </div>
 
@@ -126,7 +147,7 @@ export default function Nav() {
           className={pathname === '/auth' ? 'active' : ''}
           onClick={closePanel}
         >
-          {user ? 'Cuenta' : 'Iniciar Sesión'}
+          {!loading && (user ? 'Cuenta' : 'Iniciar Sesión')}
         </Link>
 
         <div style={{ flex: 1 }} />
@@ -143,7 +164,11 @@ export default function Nav() {
 
         <div
           className="pixel"
-          style={{ fontSize: 9, color: 'var(--ink-faint)', letterSpacing: '0.16em' }}
+          style={{
+            fontSize: 9,
+            color: 'var(--ink-faint)',
+            letterSpacing: '0.16em',
+          }}
         >
           CRÉDITOS · 03
         </div>

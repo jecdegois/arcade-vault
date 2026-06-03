@@ -17,3 +17,9 @@ export interface ScoreRow {
   user_id: string | null;
   created_at: string;
 }
+
+export interface ProfileRow {
+  user_id: string;
+  display_name: string;
+  created_at: string;
+}
