@@ -14,10 +14,14 @@ export default function Auth() {
     if (!sessionLoading && user) router.replace('/');
   }, [user, sessionLoading, router]);
 
+  const PASSWORD_REGEX =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
   const [tab, setTab] = useState<'in' | 'up'>('in');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
+  const [passError, setPassError] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -29,6 +33,15 @@ export default function Auth() {
     setLoading(true);
 
     if (tab === 'up') {
+      if (!PASSWORD_REGEX.test(pass)) {
+        setPassError(
+          'La contraseña debe tener mínimo 8 caracteres e incluir mayúsculas, minúsculas, números y símbolos.'
+        );
+        setLoading(false);
+        return;
+      }
+      setPassError('');
+
       const { error: err } = await supabase.auth.signUp({
         email,
         password: pass,
@@ -99,6 +112,7 @@ export default function Auth() {
               setTab('in');
               setError('');
               setSuccess('');
+              setPassError('');
             }}
           >
             INICIAR SESIÓN
@@ -109,6 +123,7 @@ export default function Auth() {
               setTab('up');
               setError('');
               setSuccess('');
+              setPassError('');
             }}
           >
             CREAR CUENTA
@@ -145,6 +160,18 @@ export default function Auth() {
               placeholder="••••••••"
               required
             />
+            {tab === 'up' && passError && (
+              <div
+                style={{
+                  color: 'var(--neon-magenta)',
+                  fontSize: 11,
+                  marginTop: 4,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                ⚠ {passError}
+              </div>
+            )}
           </div>
 
           {error && (
